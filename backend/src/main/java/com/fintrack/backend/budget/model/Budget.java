@@ -2,7 +2,6 @@ package com.fintrack.backend.budget.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDate;
 
 @Entity
 @Table(name = "budgets")
@@ -16,16 +15,13 @@ public class Budget {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long userId;          // người dùng tạo ngân sách
-    private String category;      // danh mục chi tiêu (VD: Food, Travel, Bills)
-    private Double limitAmount;   // giới hạn ngân sách
-    private Double spentAmount;   // số tiền đã chi
-    private LocalDate startDate;  // ngày bắt đầu
-    private LocalDate endDate;    // ngày kết thúc
+    private String category;       // Danh mục chi tiêu (vd: Ăn uống, Đi lại)
+    private Double limitAmount;    // Hạn mức chi tiêu
+    private Double spent;          // Đã chi bao nhiêu
 
-    // ✅ Tự động khởi tạo mặc định
-    @PrePersist
-    public void onCreate() {
-        if (spentAmount == null) spentAmount = 0.0;
-    }
+    // ⚠️ 'month' là từ khóa SQL -> đổi tên cột để tránh lỗi
+    @Column(name = "budget_month")
+    private String month;          // Tháng áp dụng (vd: 2025-10)
+
+    private Long walletId;         // ID ví liên kết
 }

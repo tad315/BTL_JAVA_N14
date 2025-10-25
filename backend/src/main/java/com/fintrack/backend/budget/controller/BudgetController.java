@@ -1,37 +1,52 @@
 package com.fintrack.backend.budget.controller;
 
 import com.fintrack.backend.budget.model.Budget;
-import com.fintrack.backend.budget.service.BudgetService;
+import com.fintrack.backend.budget.repository.BudgetRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@CrossOrigin(origins = "http://localhost:3000")
 @RestController
 @RequestMapping("/api/budgets")
-@CrossOrigin(origins = "http://localhost:5173")
+
 public class BudgetController {
 
     @Autowired
-    private BudgetService budgetService;
+    private BudgetRepository budgetRepository;
 
-    @PostMapping("/create")
+    @GetMapping
+    public List<Budget> getAllBudgets() {
+        return budgetRepository.findAll();
+    }
+
+    @GetMapping("/wallet/{walletId}")
+    public List<Budget> getByWallet(@PathVariable Long walletId) {
+        return budgetRepository.findByWalletId(walletId);
+    }
+
+    @PostMapping
     public Budget createBudget(@RequestBody Budget budget) {
-        return budgetService.createBudget(budget);
+        if (budget.getSpent() == null) {
+            budget.setSpent(0.0);
+        }
+        return budgetRepository.save(budget);
     }
 
-    @GetMapping("/{userId}")
-    public List<Budget> getBudgetsByUser(@PathVariable Long userId) {
-        return budgetService.getBudgetsByUser(userId);
+    @PutMapping("/{id}")
+    public Budget updateBudget(@PathVariable Long id, @RequestBody Budget updated) {
+        Budget budget = budgetRepository.findById(id).orElseThrow();
+        budget.setCategory(updated.getCategory());
+        budget.setLimitAmount(updated.getLimitAmount());
+        budget.setSpent(updated.getSpent());
+        budget.setMonth(updated.getMonth());
+        budget.setWalletId(updated.getWalletId());
+        return budgetRepository.save(budget);
     }
 
-    @PutMapping("/{budgetId}/add-spent")
-    public Budget addSpent(@PathVariable Long budgetId, @RequestParam Double delta) {
-        return budgetService.updateSpent(budgetId, delta);
-    }
-
-    @GetMapping("/{userId}/exceeded")
-    public List<Budget> getExceeded(@PathVariable Long userId) {
-        return budgetService.getExceededBudgets(userId);
+    @DeleteMapping("/{id}")
+    public void deleteBudget(@PathVariable Long id) {
+        budgetRepository.deleteById(id);
     }
 }
