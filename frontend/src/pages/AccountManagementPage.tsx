@@ -1,60 +1,67 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Box, Typography, Card, IconButton, Button, Grid } from '@mui/material'
-import { Visibility, VisibilityOff } from '@mui/icons-material'
+import { Visibility, VisibilityOff, Delete } from '@mui/icons-material'
 import DashboardLayout from '../components/DashboardLayout'
-import vpbankLogo from '../assets/vpbank.png'
-import mbbankLogo from '../assets/mbbank.png'
-import viettinbankLogo from '../assets/viettinbank.png'
+import api from '../api'
 
-interface BankAccount {
+interface Wallet {
   id: number
-  bankName: string
-  logo: string
-  balance: string
+  walletName: string
+  type: string
+  balance: number
+  bankLinked?: string
+  accountNumber?: string
+  accountName?: string
 }
 
 const AccountManagementPage = () => {
   const navigate = useNavigate()
   const [showBalance, setShowBalance] = useState(true)
+  const [accounts, setAccounts] = useState<Wallet[]>([])
 
-  const accounts: BankAccount[] = [
-    { id: 1, bankName: 'VPBank', logo: vpbankLogo, balance: '100.000.000.000' },
-    { id: 2, bankName: 'MB bank', logo: mbbankLogo, balance: '100.000.000.000' },
-    { id: 3, bankName: 'VietinBank', logo: viettinbankLogo, balance: '100.000.000.000' },
-  ]
+  const fetchAccounts = async () => {
+    try {
+      const res = await api.get('/wallets')
+      const data = res.data.filter((w: Wallet) => w.type === 'Bank')
+      setAccounts(data)
+    } catch (err) {
+      console.error('❌ Lỗi tải tài khoản:', err)
+    }
+  }
 
-  const totalBalance = '300.000.000.000'
+  useEffect(() => {
+    fetchAccounts()
+  }, [])
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm('Bạn có chắc muốn xóa tài khoản này không?')) {
+      await api.delete(`/wallets/${id}`)
+      setAccounts((prev) => prev.filter((a) => a.id !== id))
+    }
+  }
+
+  const totalBalance = accounts
+    .reduce((sum, acc) => sum + (acc.balance || 0), 0)
+    .toLocaleString()
 
   return (
     <DashboardLayout>
       <Box>
-        {/* Tổng tài sản */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h5" sx={{ mb: 2, fontWeight: 600, color: '#2E5B47' }}>
             Tổng tài sản:
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography 
-              variant="h3" 
-              sx={{ 
-                fontWeight: 700, 
-                color: '#2E5B47',
-                letterSpacing: '1px'
-              }}
-            >
-              {showBalance ? totalBalance : '******************'}
+            <Typography variant="h3" sx={{ fontWeight: 700, color: '#2E5B47' }}>
+              {showBalance ? `${totalBalance} VND` : '********'}
             </Typography>
-            <IconButton 
-              onClick={() => setShowBalance(!showBalance)}
-              sx={{ color: '#2E5B47' }}
-            >
+            <IconButton onClick={() => setShowBalance(!showBalance)} sx={{ color: '#2E5B47' }}>
               {showBalance ? <Visibility /> : <VisibilityOff />}
             </IconButton>
           </Box>
         </Box>
 
-        {/* Quản lý tài khoản */}
         <Typography variant="h5" sx={{ mb: 3, fontWeight: 600, color: '#2E5B47' }}>
           Quản lý tài khoản:
         </Typography>
@@ -68,40 +75,31 @@ const AccountManagementPage = () => {
                   borderRadius: '20px',
                   border: '2px solid #6B8E7F',
                   backgroundColor: 'white',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 8px 24px rgba(107, 142, 127, 0.2)',
-                  },
+                  '&:hover': { boxShadow: '0 8px 24px rgba(107, 142, 127, 0.2)' },
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <Box
-                    component="img"
-                    src={account.logo}
-                    alt={account.bankName}
-                    sx={{
-                      height: 40,
-                      objectFit: 'contain',
-                    }}
-                  />
-                </Box>
-                <Typography 
-                  variant="h4" 
-                  sx={{ 
-                    fontWeight: 700, 
-                    color: '#2E5B47',
-                    letterSpacing: '1px'
-                  }}
-                >
-                  {account.balance}
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#2E5B47' }}>
+                  {account.bankLinked || account.walletName}
                 </Typography>
+                <Typography variant="body2" sx={{ color: '#6B8E7F' }}>
+                  Số TK: {account.accountNumber || '-'}
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#6B8E7F' }}>
+                  Chủ TK: {account.accountName || '-'}
+                </Typography>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: '#2E5B47', mt: 1 }}>
+                  {showBalance ? `${account.balance.toLocaleString()} VND` : '********'}
+                </Typography>
+                <Box sx={{ textAlign: 'right', mt: 2 }}>
+                  <IconButton sx={{ color: '#f44336' }} onClick={() => handleDelete(account.id)}>
+                    <Delete />
+                  </IconButton>
+                </Box>
               </Card>
             </Grid>
           ))}
         </Grid>
 
-        {/* Nút Liên kết tài khoản */}
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
           <Button
             variant="contained"
@@ -116,11 +114,7 @@ const AccountManagementPage = () => {
               fontWeight: 600,
               textTransform: 'none',
               boxShadow: '0 4px 12px rgba(107, 142, 127, 0.3)',
-              '&:hover': {
-                backgroundColor: '#5A7A6D',
-                transform: 'translateY(-2px)',
-                boxShadow: '0 6px 16px rgba(107, 142, 127, 0.4)',
-              },
+              '&:hover': { backgroundColor: '#5A7A6D' },
             }}
           >
             + Liên kết tài khoản
@@ -132,4 +126,3 @@ const AccountManagementPage = () => {
 }
 
 export default AccountManagementPage
-

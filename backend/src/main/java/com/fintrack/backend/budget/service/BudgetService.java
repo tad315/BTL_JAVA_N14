@@ -2,10 +2,11 @@ package com.fintrack.backend.budget.service;
 
 import com.fintrack.backend.budget.model.Budget;
 import com.fintrack.backend.budget.repository.BudgetRepository;
+import com.fintrack.backend.wallet.model.Wallet;
+import com.fintrack.backend.wallet.repository.WalletRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class BudgetService {
@@ -13,44 +14,61 @@ public class BudgetService {
     @Autowired
     private BudgetRepository budgetRepository;
 
-    /**
-     * Tạo mới một ngân sách. Nếu chưa có giá trị đã chi (spentAmount) thì mặc định là 0.
-     */
+    @Autowired
+    private WalletRepository walletRepository;
+
+    public List<Budget> getAllBudgets() {
+        return budgetRepository.findAll();
+    }
+
     public Budget createBudget(Budget budget) {
-        if (budget.getSpent() == null) {
-            budget.setSpent(0.0);
+        Budget saved = budgetRepository.save(budget);
+        walletRepository.findById(budget.getWalletId()).ifPresent(wallet -> {
+            double newBalance = wallet.getBalance() - budget.getSpent();
+            wallet.setBalance(Math.max(newBalance, 0));
+            walletRepository.save(wallet);
+        });
+        return saved;
+    }
+
+    public Budget updateBudget(Long id, Budget updated) {
+        Budget existing = budgetRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Budget not found"));
+
+        // ✅ Tính phần chênh lệch đã chi
+        double oldSpent = existing.getSpent() != null ? existing.getSpent() : 0.0;
+        double newSpent = updated.getSpent() != null ? updated.getSpent() : 0.0;
+        double diff = newSpent - oldSpent;
+
+        // ✅ Cập nhật thông tin ngân sách
+        existing.setCategory(updated.getCategory());
+        existing.setLimitAmount(updated.getLimitAmount());
+        existing.setSpent(newSpent);
+        existing.setMonth(updated.getMonth());
+        existing.setWalletId(updated.getWalletId());
+
+        Budget saved = budgetRepository.save(existing);
+
+        // ✅ Nếu có thay đổi chi tiêu => trừ/cộng đúng phần chênh lệch
+        if (Math.abs(diff) > 0.001) {
+            walletRepository.findById(updated.getWalletId()).ifPresent(wallet -> {
+                double newBalance = wallet.getBalance() - diff;
+                wallet.setBalance(Math.max(newBalance, 0));
+                walletRepository.save(wallet);
+            });
         }
-        return budgetRepository.save(budget);
+
+        return saved;
     }
 
-    /**
-     * Lấy danh sách ngân sách theo ID ví (walletId)
-     */
-    public List<Budget> getBudgetsByWallet(Long walletId) {
-        return budgetRepository.findByWalletId(walletId);
-    }
 
-    /**
-     * Cập nhật số tiền đã chi của ngân sách (thêm hoặc bớt)
-     */
-    public Budget updateSpent(Long budgetId, Double delta) {
-        Budget budget = budgetRepository.findById(budgetId)
-                .orElseThrow(() -> new RuntimeException("Budget not found with id = " + budgetId));
-
-        double newSpent = budget.getSpent() + delta;
-        if (newSpent < 0) newSpent = 0; // tránh âm
-        budget.setSpent(newSpent);
-
-        return budgetRepository.save(budget);
-    }
-
-    /**
-     * Trả về danh sách các ngân sách đã vượt giới hạn (spent >= limit)
-     */
-    public List<Budget> getExceededBudgets(Long walletId) {
-        return budgetRepository.findByWalletId(walletId)
-                .stream()
-                .filter(b -> b.getSpent() >= b.getLimitAmount())
-                .collect(Collectors.toList());
+    public void deleteBudget(Long id) {
+        Budget budget = budgetRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Budget not found"));
+        walletRepository.findById(budget.getWalletId()).ifPresent(wallet -> {
+            wallet.setBalance(wallet.getBalance() + budget.getSpent());
+            walletRepository.save(wallet);
+        });
+        budgetRepository.delete(budget);
     }
 }

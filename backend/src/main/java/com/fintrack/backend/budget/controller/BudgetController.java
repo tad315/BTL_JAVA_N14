@@ -1,52 +1,36 @@
 package com.fintrack.backend.budget.controller;
 
 import com.fintrack.backend.budget.model.Budget;
-import com.fintrack.backend.budget.repository.BudgetRepository;
+import com.fintrack.backend.budget.service.BudgetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
-@CrossOrigin(origins = "http://localhost:3000")
 @RestController
 @RequestMapping("/api/budgets")
-
+@CrossOrigin(origins = "http://localhost:3000")
 public class BudgetController {
 
     @Autowired
-    private BudgetRepository budgetRepository;
+    private BudgetService budgetService;
 
     @GetMapping
     public List<Budget> getAllBudgets() {
-        return budgetRepository.findAll();
-    }
-
-    @GetMapping("/wallet/{walletId}")
-    public List<Budget> getByWallet(@PathVariable Long walletId) {
-        return budgetRepository.findByWalletId(walletId);
+        return budgetService.getAllBudgets();
     }
 
     @PostMapping
     public Budget createBudget(@RequestBody Budget budget) {
-        if (budget.getSpent() == null) {
-            budget.setSpent(0.0);
-        }
-        return budgetRepository.save(budget);
+        return budgetService.createBudget(budget);
     }
 
     @PutMapping("/{id}")
-    public Budget updateBudget(@PathVariable Long id, @RequestBody Budget updated) {
-        Budget budget = budgetRepository.findById(id).orElseThrow();
-        budget.setCategory(updated.getCategory());
-        budget.setLimitAmount(updated.getLimitAmount());
-        budget.setSpent(updated.getSpent());
-        budget.setMonth(updated.getMonth());
-        budget.setWalletId(updated.getWalletId());
-        return budgetRepository.save(budget);
+    public Budget updateBudget(@PathVariable Long id, @RequestBody Budget budget) {
+        return budgetService.updateBudget(id, budget);
     }
 
     @DeleteMapping("/{id}")
     public void deleteBudget(@PathVariable Long id) {
-        budgetRepository.deleteById(id);
+        budgetService.deleteBudget(id);
     }
 }
