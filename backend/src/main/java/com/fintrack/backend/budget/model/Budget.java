@@ -23,8 +23,19 @@ public class Budget {
     @Column(name = "wallet_id")
     private Long walletId;
 
+    // ✅ Thêm cờ "đóng băng" (để không trừ tiền ví nhiều lần)
+    @Column(name = "balance_locked")
+    private boolean balanceLocked = false;
+
+    // ✅ Nếu bạn muốn lưu lại số dư ví tại thời điểm tạo ngân sách (để hiển thị)
+    @Column(name = "initial_balance")
+    private Double initialBalance;
+
     public Budget() {}
 
+    // =======================
+    // Getter & Setter cơ bản
+    // =======================
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -42,4 +53,14 @@ public class Budget {
 
     public Long getWalletId() { return walletId; }
     public void setWalletId(Long walletId) { this.walletId = walletId; }
+
+    // =======================
+    // Getter & Setter mở rộng
+    // =======================
+    public boolean isBalanceLocked() { return balanceLocked; }
+    public void setBalanceLocked(boolean balanceLocked) { this.balanceLocked = balanceLocked; }
+
+    public Double getInitialBalance() { return initialBalance; }
+    public void setInitialBalance(Double initialBalance) { this.initialBalance = initialBalance; }
+
 }

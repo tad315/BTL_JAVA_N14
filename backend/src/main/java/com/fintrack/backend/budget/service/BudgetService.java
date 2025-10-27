@@ -23,24 +23,41 @@ public class BudgetService {
 
     public Budget createBudget(Budget budget) {
         Budget saved = budgetRepository.save(budget);
-        walletRepository.findById(budget.getWalletId()).ifPresent(wallet -> {
-            double newBalance = wallet.getBalance() - budget.getSpent();
-            wallet.setBalance(Math.max(newBalance, 0));
-            walletRepository.save(wallet);
-        });
+
+        // ✅ Chỉ trừ tiền ví nếu chưa trừ và có chi tiêu
+        if (!saved.isBalanceLocked() && saved.getSpent() > 0) {
+            walletRepository.findById(saved.getWalletId()).ifPresent(wallet -> {
+                wallet.setBalance(Math.max(wallet.getBalance() - saved.getSpent(), 0));
+                walletRepository.save(wallet);
+
+                // Đánh dấu ngân sách này đã “đóng băng”
+                saved.setBalanceLocked(true);
+                budgetRepository.save(saved);
+            });
+        }
+
         return saved;
     }
+
 
     public Budget updateBudget(Long id, Budget updated) {
         Budget existing = budgetRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Budget not found"));
 
-        // ✅ Tính phần chênh lệch đã chi
+        // Nếu ngân sách này đã “đóng băng” rồi, không trừ lại nữa
+        if (existing.isBalanceLocked()) {
+            existing.setCategory(updated.getCategory());
+            existing.setLimitAmount(updated.getLimitAmount());
+            existing.setSpent(updated.getSpent());
+            existing.setMonth(updated.getMonth());
+            return budgetRepository.save(existing);
+        }
+
+        // Nếu chưa “đóng băng” => xử lý chênh lệch chi tiêu
         double oldSpent = existing.getSpent() != null ? existing.getSpent() : 0.0;
         double newSpent = updated.getSpent() != null ? updated.getSpent() : 0.0;
         double diff = newSpent - oldSpent;
 
-        // ✅ Cập nhật thông tin ngân sách
         existing.setCategory(updated.getCategory());
         existing.setLimitAmount(updated.getLimitAmount());
         existing.setSpent(newSpent);
@@ -49,17 +66,18 @@ public class BudgetService {
 
         Budget saved = budgetRepository.save(existing);
 
-        // ✅ Nếu có thay đổi chi tiêu => trừ/cộng đúng phần chênh lệch
+        // Trừ/cộng chênh lệch rồi “đóng băng”
         if (Math.abs(diff) > 0.001) {
             walletRepository.findById(updated.getWalletId()).ifPresent(wallet -> {
-                double newBalance = wallet.getBalance() - diff;
-                wallet.setBalance(Math.max(newBalance, 0));
+                wallet.setBalance(Math.max(wallet.getBalance() - diff, 0));
                 walletRepository.save(wallet);
             });
         }
 
-        return saved;
+        saved.setBalanceLocked(true);
+        return budgetRepository.save(saved);
     }
+
 
 
     public void deleteBudget(Long id) {

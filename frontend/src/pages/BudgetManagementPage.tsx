@@ -2,13 +2,17 @@ import { useEffect, useState } from "react";
 import {
   Box, Typography, TextField, Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, IconButton,
-  InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Select
+  InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions,
+  MenuItem, Select
 } from "@mui/material";
 import { Search, Edit, Delete } from "@mui/icons-material";
 import DashboardLayout from "../components/DashboardLayout";
 import api from "../api";
 import { getBudgets, deleteBudget, createBudget } from "../services/budgetService";
 
+// ======================
+// Interface dữ liệu
+// ======================
 interface Budget {
   id: number;
   category: string;
@@ -42,6 +46,9 @@ const BudgetManagementPage = () => {
     walletId: 0,
   });
 
+  // ======================
+  // Fetch dữ liệu
+  // ======================
   useEffect(() => {
     fetchBudgets();
     fetchWallets();
@@ -68,6 +75,9 @@ const BudgetManagementPage = () => {
     }
   };
 
+  // ======================
+  // Xử lý mở form
+  // ======================
   const handleOpenAdd = () => {
     setEditingBudget(null);
     setFormData({ category: "", limitAmount: 0, spent: 0, month: "", walletId: 0 });
@@ -80,6 +90,9 @@ const BudgetManagementPage = () => {
     setOpenDialog(true);
   };
 
+  // ======================
+  // Lưu ngân sách
+  // ======================
   const handleSave = async () => {
     try {
       if (!formData.category || !formData.limitAmount || !formData.month || !formData.walletId) {
@@ -93,14 +106,17 @@ const BudgetManagementPage = () => {
         await createBudget(formData);
       }
 
-      // 🔄 cập nhật FE ngay
       await Promise.all([fetchBudgets(), fetchWallets()]);
       setOpenDialog(false);
     } catch (err) {
       console.error("❌ Lỗi khi lưu ngân sách:", err);
+      alert("Đã xảy ra lỗi khi lưu ngân sách!");
     }
   };
 
+  // ======================
+  // Xóa ngân sách
+  // ======================
   const handleDelete = async (id: number) => {
     if (window.confirm("Bạn có chắc muốn xóa ngân sách này không?")) {
       await deleteBudget(id);
@@ -108,10 +124,16 @@ const BudgetManagementPage = () => {
     }
   };
 
+  // ======================
+  // Lọc tìm kiếm
+  // ======================
   const filteredBudgets = budgets.filter((b) =>
     b.category?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // ======================
+  // Giao diện
+  // ======================
   return (
     <DashboardLayout>
       <Box>
@@ -119,7 +141,17 @@ const BudgetManagementPage = () => {
           Quản lý ngân sách:
         </Typography>
 
-        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
+        {/* Thanh tìm kiếm + nút thêm */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+            flexWrap: "wrap",
+            gap: 2,
+          }}
+        >
           <TextField
             placeholder="Tìm kiếm danh mục..."
             value={searchTerm}
@@ -131,40 +163,66 @@ const BudgetManagementPage = () => {
                 </InputAdornment>
               ),
             }}
-            sx={{ width: "40%" }}
+            sx={{
+              minWidth: { xs: "100%", sm: "300px" },
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: "#fff",
+                borderRadius: "25px",
+                "& fieldset": { borderColor: "#6B8E7F" },
+                "&:hover fieldset": { borderColor: "#2E5B47" },
+              },
+            }}
           />
 
           <Button
             variant="contained"
             onClick={handleOpenAdd}
-            sx={{ backgroundColor: "#6B8E7F", borderRadius: "20px" }}
+            sx={{
+              backgroundColor: "#6B8E7F",
+              color: "#fff",
+              borderRadius: "25px",
+              px: 4,
+              py: 1,
+              textTransform: "none",
+              fontSize: "1rem",
+              "&:hover": { backgroundColor: "#2E5B47" },
+            }}
           >
             + Thêm ngân sách
           </Button>
         </Box>
 
+        {/* Bảng dữ liệu */}
         <TableContainer
           component={Paper}
           sx={{
             borderRadius: 2,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-            backgroundColor: "rgba(255,255,255,0.9)",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+            backgroundColor: "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(10px)",
           }}
         >
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: "#6B8E7F" }}>
-                <TableCell sx={{ color: "white" }}>Danh mục</TableCell>
-                <TableCell sx={{ color: "white" }}>Ngân sách</TableCell>
-                <TableCell sx={{ color: "white" }}>Đã chi</TableCell>
-                <TableCell sx={{ color: "white" }}>Còn lại</TableCell>
-                <TableCell sx={{ color: "white" }}>Tháng</TableCell>
-                <TableCell sx={{ color: "white" }}>Ví</TableCell>
-                <TableCell sx={{ color: "white" }}>Hành động</TableCell>
+                <TableCell sx={{ color: "#fff", fontWeight: 600 }}>Danh mục</TableCell>
+                <TableCell sx={{ color: "#fff", fontWeight: 600 }}>Ngân sách</TableCell>
+                <TableCell sx={{ color: "#fff", fontWeight: 600 }}>Đã chi</TableCell>
+                <TableCell sx={{ color: "#fff", fontWeight: 600 }}>Còn lại</TableCell>
+                <TableCell sx={{ color: "#fff", fontWeight: 600 }}>Tháng</TableCell>
+                <TableCell sx={{ color: "#fff", fontWeight: 600 }}>Ví</TableCell>
+                <TableCell sx={{ color: "#fff", fontWeight: 600 }}>Hành động</TableCell>
               </TableRow>
             </TableHead>
+
             <TableBody>
-              {filteredBudgets.length > 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center">
+                    ⏳ Đang tải dữ liệu...
+                  </TableCell>
+                </TableRow>
+              ) : filteredBudgets.length > 0 ? (
                 filteredBudgets.map((b) => {
                   const wallet = wallets.find((w) => w.id === b.walletId);
                   const remaining = (b.limitAmount || 0) - (b.spent || 0);
@@ -173,13 +231,18 @@ const BudgetManagementPage = () => {
                       <TableCell>{b.category}</TableCell>
                       <TableCell>{b.limitAmount.toLocaleString()} VND</TableCell>
                       <TableCell>{b.spent.toLocaleString()} VND</TableCell>
-                      <TableCell sx={{ color: remaining < 0 ? "#d32f2f" : "#2E7D32", fontWeight: 600, }}>
+                      <TableCell
+                        sx={{
+                          color: remaining < 0 ? "#d32f2f" : "#2E7D32",
+                          fontWeight: 600,
+                        }}
+                      >
                         {remaining.toLocaleString()} VND
                       </TableCell>
                       <TableCell>{b.month}</TableCell>
                       <TableCell>
                         {wallet
-                          ? `${wallet.walletName} — ${wallet.balance.toLocaleString()} VND`
+                          ? `${wallet.walletName}`
                           : "N/A"}
                       </TableCell>
                       <TableCell>
@@ -204,21 +267,42 @@ const BudgetManagementPage = () => {
           </Table>
         </TableContainer>
 
-        {/* Dialog Thêm / Sửa */}
+        {/* Dialog thêm/sửa */}
         <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth maxWidth="xs">
           <DialogTitle>{editingBudget ? "Chỉnh sửa ngân sách" : "Thêm ngân sách mới"}</DialogTitle>
           <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-            <TextField label="Danh mục" value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })} />
-            <TextField label="Giới hạn (VND)" type="number" value={formData.limitAmount}
-              onChange={(e) => setFormData({ ...formData, limitAmount: +e.target.value })} />
-            <TextField label="Đã chi (VND)" type="number" value={formData.spent}
-              onChange={(e) => setFormData({ ...formData, spent: +e.target.value })} />
-            <TextField label="Tháng (YYYY-MM)" value={formData.month}
-              onChange={(e) => setFormData({ ...formData, month: e.target.value })} />
-            <Select value={formData.walletId}
+            <TextField
+              label="Danh mục"
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              fullWidth
+            />
+            <TextField
+              label="Giới hạn (VND)"
+              type="number"
+              value={formData.limitAmount}
+              onChange={(e) => setFormData({ ...formData, limitAmount: +e.target.value })}
+              fullWidth
+            />
+            <TextField
+              label="Đã chi (VND)"
+              type="number"
+              value={formData.spent}
+              onChange={(e) => setFormData({ ...formData, spent: +e.target.value })}
+              fullWidth
+            />
+            <TextField
+              label="Tháng (YYYY-MM)"
+              value={formData.month}
+              onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+              fullWidth
+            />
+            <Select
+              value={formData.walletId}
               onChange={(e) => setFormData({ ...formData, walletId: +e.target.value })}
-              displayEmpty>
+              displayEmpty
+              fullWidth
+            >
               <MenuItem value={0} disabled>Chọn ví...</MenuItem>
               {wallets.map((w) => (
                 <MenuItem key={w.id} value={w.id}>
