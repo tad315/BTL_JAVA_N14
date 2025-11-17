@@ -18,89 +18,181 @@ interface Wallet {
 const AccountManagementPage = () => {
   const navigate = useNavigate()
   const [showBalance, setShowBalance] = useState(true)
-  const [accounts, setAccounts] = useState<Wallet[]>([])
+  const [wallets, setWallets] = useState<Wallet[]>([])
 
-  const fetchAccounts = async () => {
+  const fetchWallets = async () => {
     try {
       const res = await api.get('/wallets')
-      const data = res.data.filter((w: Wallet) => w.type === 'Bank')
-      setAccounts(data)
+      setWallets(res.data)
     } catch (err) {
-      console.error('❌ Lỗi tải tài khoản:', err)
+      console.error('❌ Lỗi tải ví:', err)
     }
   }
 
   useEffect(() => {
-    fetchAccounts()
+    fetchWallets()
   }, [])
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('Bạn có chắc muốn xóa tài khoản này không?')) {
+    if (window.confirm('Bạn có chắc muốn xóa ví này không?')) {
       await api.delete(`/wallets/${id}`)
-      setAccounts((prev) => prev.filter((a) => a.id !== id))
+      setWallets((prev) => prev.filter((w) => w.id !== id))
     }
   }
 
-  const totalBalance = accounts
-    .reduce((sum, acc) => sum + (acc.balance || 0), 0)
+  // 🎯 Tách ví thành 3 nhóm
+  const cashWallets = wallets.filter((w) => w.type === 'Cash')
+  const ewallets = wallets.filter((w) => w.type === 'E-Wallet')
+  const bankWallets = wallets.filter((w) => w.type === 'Bank')
+
+  // Tổng số dư
+  const totalBalance = wallets
+    .reduce((sum, w) => sum + (w.balance || 0), 0)
     .toLocaleString()
+
+  const renderWalletCard = (wallet: Wallet) => (
+    <Grid item xs={12} md={6} key={wallet.id}>
+      <Card
+        sx={{
+          p: 3,
+          borderRadius: '20px',
+          border: '2px solid #6B8E7F',
+          backgroundColor: 'white',
+          '&:hover': { boxShadow: '0 8px 24px rgba(107, 142, 127, 0.2)' },
+        }}
+      >
+        <Typography variant="h6" sx={{ fontWeight: 600, color: '#2E5B47' }}>
+          {wallet.walletName}
+        </Typography>
+
+        {/* Chỉ với ví bank mới hiển thị STK và chủ TK */}
+        {wallet.type === 'Bank' && (
+          <>
+            <Typography variant="body2" sx={{ color: '#6B8E7F' }}>
+              Số TK: {wallet.accountNumber || '-'}
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#6B8E7F' }}>
+              Chủ TK: {wallet.accountName || '-'}
+            </Typography>
+          </>
+        )}
+
+        <Typography variant="h5" sx={{ fontWeight: 700, color: '#2E5B47', mt: 1 }}>
+          {showBalance ? `${wallet.balance.toLocaleString()} VND` : '********'}
+        </Typography>
+
+        <Box sx={{ textAlign: 'right', mt: 2 }}>
+          <IconButton sx={{ color: '#f44336' }} onClick={() => handleDelete(wallet.id)}>
+            <Delete />
+          </IconButton>
+        </Box>
+      </Card>
+    </Grid>
+  )
 
   return (
     <DashboardLayout>
       <Box>
+        {/* Tổng tài sản */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h5" sx={{ mb: 2, fontWeight: 600, color: '#2E5B47' }}>
             Tổng tài sản:
           </Typography>
+
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Typography variant="h3" sx={{ fontWeight: 700, color: '#2E5B47' }}>
               {showBalance ? `${totalBalance} VND` : '********'}
             </Typography>
+
             <IconButton onClick={() => setShowBalance(!showBalance)} sx={{ color: '#2E5B47' }}>
               {showBalance ? <Visibility /> : <VisibilityOff />}
             </IconButton>
           </Box>
         </Box>
 
-        <Typography variant="h5" sx={{ mb: 3, fontWeight: 600, color: '#2E5B47' }}>
-          Quản lý tài khoản:
+        {/* Ví tiền mặt */}
+        <Typography
+          variant="h5"
+          sx={{ mb: 1, fontWeight: 700, color: '#2E5B47' }}
+        >
+          Ví tiền mặt
         </Typography>
 
+        {cashWallets.length === 0 ? (
+          <Box
+            sx={{
+              border: '2px dashed #6B8E7F',
+              padding: '16px',
+              borderRadius: '12px',
+              color: '#6B8E7F',
+              fontStyle: 'italic',
+              mb: 4,
+              textAlign: 'center',
+              backgroundColor: 'rgba(107,142,127,0.05)',
+            }}
+          >
+            Bạn chưa có ví tiền mặt
+          </Box>
+        ) : (
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            {cashWallets.map(renderWalletCard)}
+          </Grid>
+        )}
+
+
+        {/* Ví điện tử */}
+        <Typography
+          variant="h5"
+          sx={{ mb: 1, fontWeight: 700, color: '#2E5B47' }}
+        >
+          Ví điện tử
+        </Typography>
+
+        {ewallets.length === 0 ? (
+          <Box
+            sx={{
+              border: '2px dashed #6B8E7F',
+              padding: '16px',
+              borderRadius: '12px',
+              color: '#6B8E7F',
+              fontStyle: 'italic',
+              mb: 4,
+              textAlign: 'center',
+              backgroundColor: 'rgba(107,142,127,0.05)'
+            }}
+          >
+            Bạn chưa có ví điện tử
+          </Box>
+        ) : (
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            {ewallets.map(renderWalletCard)}
+          </Grid>
+        )}
+
+        {/* Liên kết ngân hàng */}
+        <Typography variant="h5" sx={{ mb: 2, fontWeight: 600, color: '#2E5B47' }}>
+          Liên kết ngân hàng
+        </Typography>
+        <Box
+            sx={{
+              border: '2px dashed #6B8E7F',
+              padding: '16px',
+              borderRadius: '12px',
+              color: '#6B8E7F',
+              fontStyle: 'italic',
+              mb: 4,
+              textAlign: 'center',
+              backgroundColor: 'rgba(107,142,127,0.05)'
+            }}
+          >
+            Chưa có tài khoản ngân hàng
+          </Box>
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          {accounts.map((account) => (
-            <Grid item xs={12} md={6} key={account.id}>
-              <Card
-                sx={{
-                  p: 3,
-                  borderRadius: '20px',
-                  border: '2px solid #6B8E7F',
-                  backgroundColor: 'white',
-                  '&:hover': { boxShadow: '0 8px 24px rgba(107, 142, 127, 0.2)' },
-                }}
-              >
-                <Typography variant="h6" sx={{ fontWeight: 600, color: '#2E5B47' }}>
-                  {account.bankLinked || account.walletName}
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#6B8E7F' }}>
-                  Số TK: {account.accountNumber || '-'}
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#6B8E7F' }}>
-                  Chủ TK: {account.accountName || '-'}
-                </Typography>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: '#2E5B47', mt: 1 }}>
-                  {showBalance ? `${account.balance.toLocaleString()} VND` : '********'}
-                </Typography>
-                <Box sx={{ textAlign: 'right', mt: 2 }}>
-                  <IconButton sx={{ color: '#f44336' }} onClick={() => handleDelete(account.id)}>
-                    <Delete />
-                  </IconButton>
-                </Box>
-              </Card>
-            </Grid>
-          ))}
+          {bankWallets.map(renderWalletCard)}
         </Grid>
 
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        {/* Nút thêm ví */}
+        <Box sx={{ textAlign: 'center', mt: 4 }}>
           <Button
             variant="contained"
             onClick={() => navigate('/accounts/add')}
@@ -117,7 +209,7 @@ const AccountManagementPage = () => {
               '&:hover': { backgroundColor: '#5A7A6D' },
             }}
           >
-            + Liên kết tài khoản
+            + Thêm ví mới
           </Button>
         </Box>
       </Box>

@@ -15,7 +15,6 @@ public class Wallet {
     private Double balance = 0.0;  // Số dư
     private Long userId;           // Liên kết người dùng
 
-    // 🔥 Các trường mới cần thêm
     private String bankLinked;     // Ngân hàng liên kết (VD: VPBank)
     private String accountNumber;  // Số tài khoản
     private String accountName;    // Tên chủ tài khoản

@@ -3,16 +3,13 @@ import {
   Box, Typography, TextField, Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, IconButton,
   InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions,
-  MenuItem, Select
+  MenuItem, Select, FormControl, InputLabel
 } from "@mui/material";
 import { Search, Edit, Delete } from "@mui/icons-material";
 import DashboardLayout from "../components/DashboardLayout";
 import api from "../api";
 import { getBudgets, deleteBudget, createBudget } from "../services/budgetService";
 
-// ======================
-// Interface dữ liệu
-// ======================
 interface Budget {
   id: number;
   category: string;
@@ -38,6 +35,8 @@ const BudgetManagementPage = () => {
 
   const [openDialog, setOpenDialog] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
+
+  // --- form tạo mới / thêm chi tiêu ---
   const [formData, setFormData] = useState({
     category: "",
     limitAmount: 0,
@@ -46,9 +45,12 @@ const BudgetManagementPage = () => {
     walletId: 0,
   });
 
-  // ======================
-  // Fetch dữ liệu
-  // ======================
+  // lựa chọn trong Select "Danh mục"
+  // "" = chưa chọn; "__new__" = danh mục mới; number = id ngân sách cũ
+  const [selectedBudgetChoice, setSelectedBudgetChoice] = useState<string | number>("");
+  const [additionalSpent, setAdditionalSpent] = useState<number>(0);
+  const [additionalMonth, setAdditionalMonth] = useState<string>("");
+
   useEffect(() => {
     fetchBudgets();
     fetchWallets();
@@ -75,48 +77,93 @@ const BudgetManagementPage = () => {
     }
   };
 
-  // ======================
-  // Xử lý mở form
-  // ======================
+  // mở dialog "Thêm ngân sách"
   const handleOpenAdd = () => {
     setEditingBudget(null);
     setFormData({ category: "", limitAmount: 0, spent: 0, month: "", walletId: 0 });
+    setSelectedBudgetChoice("");
+    setAdditionalSpent(0);
+    setAdditionalMonth("");
     setOpenDialog(true);
   };
 
+  // mở dialog "Sửa"
   const handleOpenEdit = (budget: Budget) => {
     setEditingBudget(budget);
-    setFormData({ ...budget });
+    setFormData({
+      category: budget.category,
+      limitAmount: budget.limitAmount,
+      spent: budget.spent,
+      month: budget.month,
+      walletId: budget.walletId,
+    });
     setOpenDialog(true);
   };
 
-  // ======================
-  // Lưu ngân sách
-  // ======================
+  // Lưu
   const handleSave = async () => {
     try {
-      if (!formData.category || !formData.limitAmount || !formData.month || !formData.walletId) {
-        alert("⚠️ Vui lòng nhập đủ thông tin!");
+      // --- CASE 1: đang sửa ngân sách ---
+      if (editingBudget) {
+        if (!formData.category || !formData.limitAmount || !formData.walletId) {
+          alert("⚠️ Vui lòng nhập đủ thông tin!");
+          return;
+        }
+        await api.put(`/budgets/${editingBudget.id}`, { ...formData });
+        await Promise.all([fetchBudgets(), fetchWallets()]);
+        setOpenDialog(false);
         return;
       }
 
-      if (editingBudget) {
-        await api.put(`/budgets/${editingBudget.id}`, formData);
-      } else {
-        await createBudget(formData);
+      // --- CASE 2: Thêm mới / Cập nhật chi tiêu ---
+      if (!selectedBudgetChoice) {
+        alert("⚠️ Vui lòng chọn danh mục hoặc 'Danh mục mới...'");
+        return;
       }
 
-      await Promise.all([fetchBudgets(), fetchWallets()]);
-      setOpenDialog(false);
+      // 2.1. Chọn danh mục có sẵn ⇒ thêm chi tiêu
+      if (typeof selectedBudgetChoice === "number") {
+        if (additionalSpent <= 0) {
+          alert("⚠️ Vui lòng nhập số tiền chi thêm > 0!");
+          return;
+        }
+
+        await api.post(`/budgets/${selectedBudgetChoice}/add-spent`, {
+          amount: additionalSpent,
+          month: additionalMonth || undefined,
+        });
+
+        await Promise.all([fetchBudgets(), fetchWallets()]);
+        setOpenDialog(false);
+        return;
+      }
+
+      // 2.2. Chọn "Danh mục mới..."
+      if (selectedBudgetChoice === "__new__") {
+        if (!formData.category || !formData.limitAmount || !formData.walletId) {
+          alert("⚠️ Vui lòng nhập tên danh mục, hạn mức và chọn ví!");
+          return;
+        }
+
+        const payload = {
+          category: formData.category,
+          limitAmount: formData.limitAmount,
+          spent: 0,
+          month: formData.month || "",
+          walletId: formData.walletId,
+        };
+
+        await createBudget(payload);
+        await Promise.all([fetchBudgets(), fetchWallets()]);
+        setOpenDialog(false);
+        return;
+      }
     } catch (err) {
       console.error("❌ Lỗi khi lưu ngân sách:", err);
       alert("Đã xảy ra lỗi khi lưu ngân sách!");
     }
   };
 
-  // ======================
-  // Xóa ngân sách
-  // ======================
   const handleDelete = async (id: number) => {
     if (window.confirm("Bạn có chắc muốn xóa ngân sách này không?")) {
       await deleteBudget(id);
@@ -124,16 +171,15 @@ const BudgetManagementPage = () => {
     }
   };
 
-  // ======================
-  // Lọc tìm kiếm
-  // ======================
   const filteredBudgets = budgets.filter((b) =>
     b.category?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // ======================
-  // Giao diện
-  // ======================
+  const selectedBudget =
+    typeof selectedBudgetChoice === "number"
+      ? budgets.find((b) => b.id === selectedBudgetChoice)
+      : null;
+
   return (
     <DashboardLayout>
       <Box>
@@ -141,7 +187,7 @@ const BudgetManagementPage = () => {
           Quản lý ngân sách:
         </Typography>
 
-        {/* Thanh tìm kiếm + nút thêm */}
+        {/* search + button */}
         <Box
           sx={{
             display: "flex",
@@ -192,7 +238,7 @@ const BudgetManagementPage = () => {
           </Button>
         </Box>
 
-        {/* Bảng dữ liệu */}
+        {/* bảng */}
         <TableContainer
           component={Paper}
           sx={{
@@ -214,7 +260,6 @@ const BudgetManagementPage = () => {
                 <TableCell sx={{ color: "#fff", fontWeight: 600 }}>Hành động</TableCell>
               </TableRow>
             </TableHead>
-
             <TableBody>
               {loading ? (
                 <TableRow>
@@ -240,11 +285,7 @@ const BudgetManagementPage = () => {
                         {remaining.toLocaleString()} VND
                       </TableCell>
                       <TableCell>{b.month}</TableCell>
-                      <TableCell>
-                        {wallet
-                          ? `${wallet.walletName}`
-                          : "N/A"}
-                      </TableCell>
+                      <TableCell>{wallet ? wallet.walletName : "N/A"}</TableCell>
                       <TableCell>
                         <IconButton color="primary" onClick={() => handleOpenEdit(b)}>
                           <Edit />
@@ -267,53 +308,182 @@ const BudgetManagementPage = () => {
           </Table>
         </TableContainer>
 
-        {/* Dialog thêm/sửa */}
+        {/* Dialog thêm / sửa */}
         <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth maxWidth="xs">
-          <DialogTitle>{editingBudget ? "Chỉnh sửa ngân sách" : "Thêm ngân sách mới"}</DialogTitle>
+          <DialogTitle>
+            {editingBudget ? "Chỉnh sửa ngân sách" : "Thêm / cập nhật ngân sách"}
+          </DialogTitle>
+
           <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-            <TextField
-              label="Danh mục"
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              fullWidth
-            />
-            <TextField
-              label="Giới hạn (VND)"
-              type="number"
-              value={formData.limitAmount}
-              onChange={(e) => setFormData({ ...formData, limitAmount: +e.target.value })}
-              fullWidth
-            />
-            <TextField
-              label="Đã chi (VND)"
-              type="number"
-              value={formData.spent}
-              onChange={(e) => setFormData({ ...formData, spent: +e.target.value })}
-              fullWidth
-            />
-            <TextField
-              label="Tháng (YYYY-MM)"
-              value={formData.month}
-              onChange={(e) => setFormData({ ...formData, month: e.target.value })}
-              fullWidth
-            />
-            <Select
-              value={formData.walletId}
-              onChange={(e) => setFormData({ ...formData, walletId: +e.target.value })}
-              displayEmpty
-              fullWidth
-            >
-              <MenuItem value={0} disabled>Chọn ví...</MenuItem>
-              {wallets.map((w) => (
-                <MenuItem key={w.id} value={w.id}>
-                  {w.walletName} — {w.balance.toLocaleString()} VND
-                </MenuItem>
-              ))}
-            </Select>
+            {editingBudget ? (
+              // ====== FORM SỬA NGÂN SÁCH ======
+              <>
+                <TextField
+                  label="Danh mục"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  fullWidth
+                />
+                <TextField
+                  label="Giới hạn (VND)"
+                  type="number"
+                  value={formData.limitAmount}
+                  onChange={(e) =>
+                    setFormData({ ...formData, limitAmount: +e.target.value })
+                  }
+                  fullWidth
+                />
+                <TextField
+                  label="Đã chi (VND)"
+                  type="number"
+                  value={formData.spent}
+                  onChange={(e) =>
+                    setFormData({ ...formData, spent: +e.target.value })
+                  }
+                  fullWidth
+                />
+                <TextField
+                  label="Tháng (YYYY-MM)"
+                  value={formData.month}
+                  onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+                  fullWidth
+                />
+                <Select
+                  value={formData.walletId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, walletId: +e.target.value })
+                  }
+                  fullWidth
+                >
+                  {wallets.map((w) => (
+                    <MenuItem key={w.id} value={w.id}>
+                      {w.walletName} — {w.balance.toLocaleString()} VND
+                    </MenuItem>
+                  ))}
+                </Select>
+              </>
+            ) : (
+              // ====== FORM THÊM / CẬP NHẬT CHI TIÊU ======
+              <>
+                {/* 1. Chọn danh mục */}
+                <FormControl fullWidth>
+                  <InputLabel id="budget-choice-label">Danh mục</InputLabel>
+                  <Select
+                    labelId="budget-choice-label"
+                    label="Danh mục"
+                    value={selectedBudgetChoice}
+                    onChange={(e) => setSelectedBudgetChoice(e.target.value)}
+                  >
+                    <MenuItem value="">
+                      <em>— Chọn danh mục —</em>
+                    </MenuItem>
+
+                    {budgets.map((b) => {
+                      const wallet = wallets.find((w) => w.id === b.walletId);
+                      return (
+                        <MenuItem key={b.id} value={b.id}>
+                          {b.category} — {wallet ? wallet.walletName : "N/A"}{" "}
+                          {b.month && `(${b.month})`}
+                        </MenuItem>
+                      );
+                    })}
+
+                    <MenuItem value="__new__">
+                      <em>+ Danh mục mới...</em>
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+
+                {/* 2. Nếu chọn danh mục có sẵn ⇒ nhập "Chi thêm" */}
+                {typeof selectedBudgetChoice === "number" && selectedBudget && (
+                  <>
+                    <Box sx={{ fontSize: 14, color: "#555" }}>
+                      <div>Hạn mức: {selectedBudget.limitAmount.toLocaleString()} VND</div>
+                      <div>Đã chi: {selectedBudget.spent.toLocaleString()} VND</div>
+                      <div>
+                        Còn lại:{" "}
+                        {(
+                          (selectedBudget.limitAmount || 0) -
+                          (selectedBudget.spent || 0)
+                        ).toLocaleString()}{" "}
+                        VND
+                      </div>
+                    </Box>
+
+                    <TextField
+                      label="Chi thêm (VND)"
+                      type="number"
+                      value={additionalSpent}
+                      onChange={(e) => setAdditionalSpent(+e.target.value)}
+                      fullWidth
+                    />
+                    <TextField
+                      label="Tháng (YYYY-MM)"
+                      value={additionalMonth}
+                      onChange={(e) => setAdditionalMonth(e.target.value)}
+                      fullWidth
+                    />
+                  </>
+                )}
+
+                {/* 3. Nếu chọn "Danh mục mới..." ⇒ nhập thông tin ngân sách mới */}
+                {selectedBudgetChoice === "__new__" && (
+                  <>
+                    <TextField
+                      label="Tên danh mục mới"
+                      value={formData.category}
+                      onChange={(e) =>
+                        setFormData({ ...formData, category: e.target.value })
+                      }
+                      fullWidth
+                    />
+                    <TextField
+                      label="Hạn mức (VND)"
+                      type="number"
+                      value={formData.limitAmount}
+                      onChange={(e) =>
+                        setFormData({ ...formData, limitAmount: +e.target.value })
+                      }
+                      fullWidth
+                    />
+                    <TextField
+                      label="Tháng (YYYY-MM) (tuỳ chọn)"
+                      value={formData.month}
+                      onChange={(e) =>
+                        setFormData({ ...formData, month: e.target.value })
+                      }
+                      fullWidth
+                    />
+                    <Select
+                      value={formData.walletId}
+                      onChange={(e) =>
+                        setFormData({ ...formData, walletId: +e.target.value })
+                      }
+                      displayEmpty
+                      fullWidth
+                    >
+                      <MenuItem value={0} disabled>
+                        Chọn ví...
+                      </MenuItem>
+                      {wallets.map((w) => (
+                        <MenuItem key={w.id} value={w.id}>
+                          {w.walletName} — {w.balance.toLocaleString()} VND
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </>
+                )}
+              </>
+            )}
           </DialogContent>
+
           <DialogActions>
             <Button onClick={() => setOpenDialog(false)}>Hủy</Button>
-            <Button variant="contained" sx={{ backgroundColor: "#6B8E7F" }} onClick={handleSave}>
+            <Button
+              variant="contained"
+              sx={{ backgroundColor: "#6B8E7F" }}
+              onClick={handleSave}
+            >
               Lưu
             </Button>
           </DialogActions>

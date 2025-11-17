@@ -4,6 +4,7 @@ import com.fintrack.backend.budget.model.Budget;
 import com.fintrack.backend.budget.service.BudgetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -32,5 +33,13 @@ public class BudgetController {
     @DeleteMapping("/{id}")
     public void deleteBudget(@PathVariable Long id) {
         budgetService.deleteBudget(id);
+    }
+
+    // ======================
+    // API thêm chi tiêu
+    // ======================
+    @PostMapping("/{id}/add-spent")
+    public Budget addSpent(@PathVariable Long id, @RequestBody AddSpentRequest request) {
+        return budgetService.addSpent(id, request.getAmount(), request.getMonth());
     }
 }
