@@ -14,7 +14,7 @@ import CustomInput from '../components/CustomInput'
 import CustomCard from '../components/CustomCard'
 import backgroundImage from '../assets/nen.png'
 import vissmartLogo from '../assets/Vissmart.png'
-import api from '../api' // <-- THÊM MỚI: Import file axios config
+import api from '../api'
 
 const LoginPage = () => {
   const navigate = useNavigate()
@@ -23,7 +23,8 @@ const LoginPage = () => {
     email: '',
     password: '',
   })
-  // THÊM MỚI: State để xử lý lỗi
+
+  // State hiển thị lỗi nếu đăng nhập thất bại
   const [error, setError] = useState('')
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,12 +34,9 @@ const LoginPage = () => {
     })
   }
 
-  // ===================================
-  // BẮT ĐẦU PHẦN CẬP NHẬT
-  // ===================================
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('') // Xóa lỗi cũ khi submit
+    setError('') // Reset lỗi trước khi gọi API mới
 
     try {
       const { email, password } = formData
@@ -49,33 +47,49 @@ const LoginPage = () => {
         password,
       })
 
-      // 2. Đăng nhập thành công, response.data chứa { token: "..." }
-      console.log('Đăng nhập thành công:', response.data)
+      console.log('Login Response:', response.data)
 
-      // 3. Lưu token vào localStorage
-      localStorage.setItem('token', response.data.token)
-      // (Tùy chọn) Bạn cũng có thể lưu thông tin người dùng
-      // localStorage.setItem('user', JSON.stringify({ fullName: response.data.fullName }))
+      // 2. Lưu token (bắt buộc)
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token)
+      }
 
-      // 4. Điều hướng đến trang dashboard
+      // 3. LƯU TÊN NGƯỜI DÙNG (Quan trọng để hiện trên Dashboard)
+      // Code này tự động kiểm tra xem backend trả về tên field là gì
+      const backendName = response.data.fullName || response.data.full_name || response.data.name;
+
+      if (backendName) {
+        localStorage.setItem('userFullName', backendName);
+      } else {
+        // Fallback: Nếu API login không trả về tên, thử xem lúc đăng ký có lưu không
+        // Nếu không có gì cả thì Dashboard sẽ hiện "User" mặc định
+        console.warn("API Login không trả về field tên (fullName/full_name).");
+      }
+
+      // 4. Chuyển hướng
       navigate('/dashboard')
 
     } catch (err: any) {
-      // 5. Xử lý lỗi
-      console.error('Lỗi khi đăng nhập:', err)
+      console.error('Lỗi đăng nhập:', err)
+
+      // Xử lý hiển thị thông báo lỗi ra màn hình
       if (err.message === 'Network Error') {
-         setError('Không thể kết nối đến máy chủ. Vui lòng thử lại sau.')
-      } else if (err.response && (err.response.status === 401 || err.response.status === 403)) {
-        // Lỗi 401/403 thường là sai email hoặc mật khẩu (do Spring Security)
-         setError('Sai email hoặc mật khẩu. Vui lòng thử lại.')
+         setError('Không thể kết nối đến máy chủ (Network Error).')
+      } else if (err.response) {
+        // Lỗi từ Backend trả về (ví dụ: 401 Unauthorized)
+        if (err.response.status === 401 || err.response.status === 403) {
+          setError('Email hoặc mật khẩu không chính xác.')
+        } else if (err.response.data && err.response.data.message) {
+          // Nếu backend có trả về message lỗi cụ thể
+          setError(err.response.data.message)
+        } else {
+          setError('Đã có lỗi xảy ra. Vui lòng thử lại.')
+        }
       } else {
-         setError('Đã có lỗi xảy ra. Vui lòng thử lại.')
+         setError('Lỗi không xác định. Vui lòng thử lại.')
       }
     }
   }
-  // ===================================
-  // KẾT THÚC PHẦN CẬP NHẬT
-  // ===================================
 
   return (
     <Box
@@ -92,7 +106,6 @@ const LoginPage = () => {
     >
       <Container maxWidth="sm">
         <Box sx={{ textAlign: 'center', mb: 4 }}>
-          {/* ... Logo và Tiêu đề ... */}
           <Box
             component="img"
             src={vissmartLogo}
@@ -113,7 +126,7 @@ const LoginPage = () => {
         <CustomCard elevation={2}>
           <form onSubmit={handleSubmit}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              {/* ... Input Email và Password ... */}
+
               <CustomInput
                 name="email"
                 label="Email"
@@ -156,7 +169,6 @@ const LoginPage = () => {
                 }}
               />
 
-
               <Box sx={{ textAlign: 'right' }}>
                 <Link
                   component={RouterLink}
@@ -172,9 +184,14 @@ const LoginPage = () => {
                 </Link>
               </Box>
 
-              {/* THÊM MỚI: Hiển thị lỗi */}
+              {/* Hiển thị lỗi nếu có */}
               {error && (
-                <Typography color="error" variant="body2" textAlign="center">
+                <Typography
+                  color="error"
+                  variant="body2"
+                  textAlign="center"
+                  sx={{ backgroundColor: 'rgba(255,0,0,0.1)', p: 1, borderRadius: 1 }}
+                >
                   {error}
                 </Typography>
               )}
@@ -195,9 +212,8 @@ const LoginPage = () => {
                 Đăng nhập
               </Button>
 
-              {/* Social Login Section (Giữ nguyên) */}
               <Box sx={{ textAlign: 'center', my: 3 }}>
-                {/* ... code social ... */}
+                {/* Khu vực Social Login nếu cần */}
               </Box>
 
               <Box sx={{ textAlign: 'center', mt: 2 }}>
@@ -220,8 +236,6 @@ const LoginPage = () => {
             </Box>
           </form>
         </CustomCard>
-
-        {/* ...Phần Quay lại trang chủ... */}
       </Container>
     </Box>
   )
