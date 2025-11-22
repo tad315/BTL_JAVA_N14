@@ -13,6 +13,16 @@ import ExpenseAnalysisPage from './pages/ExpenseAnalysisPage'
 import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
 
+// ===================================
+// BẮT ĐẦU PHẦN THÊM MỚI
+// ===================================
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
+// ===================================
+// KẾT THÚC PHẦN THÊM MỚI
+// ===================================
+
+
 // Tạo theme tùy chỉnh
 const theme = createTheme({
   palette: {
@@ -51,6 +61,16 @@ function App() {
           <Route path="/analysis" element={<ExpenseAnalysisPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+
+          {/* =================================== */}
+          {/* BẮT ĐẦU PHẦN THÊM MỚI */}
+          {/* =================================== */}
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          {/* =================================== */}
+          {/* KẾT THÚC PHẦN THÊM MỚI */}
+          {/* =================================== */}
+
         </Routes>
       </Router>
     </ThemeProvider>
@@ -58,4 +78,3 @@ function App() {
 }
 
 export default App
-

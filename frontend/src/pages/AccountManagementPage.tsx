@@ -35,8 +35,12 @@ const AccountManagementPage = () => {
 
   const handleDelete = async (id: number) => {
     if (window.confirm('Bạn có chắc muốn xóa ví này không?')) {
-      await api.delete(`/wallets/${id}`)
-      setWallets((prev) => prev.filter((w) => w.id !== id))
+      try {
+        await api.delete(`/wallets/${id}`)
+        setWallets((prev) => prev.filter((w) => w.id !== id))
+      } catch (err) {
+        console.error("Lỗi xóa ví:", err)
+      }
     }
   }
 
@@ -65,14 +69,14 @@ const AccountManagementPage = () => {
           {wallet.walletName}
         </Typography>
 
-        {/* Chỉ với ví bank mới hiển thị STK và chủ TK */}
-        {wallet.type === 'Bank' && (
+        {/* Hiển thị thông tin phụ cho Ngân hàng/Ví điện tử */}
+        {(wallet.type === 'Bank' || wallet.type === 'E-Wallet') && (
           <>
-            <Typography variant="body2" sx={{ color: '#6B8E7F' }}>
-              Số TK: {wallet.accountNumber || '-'}
+            <Typography variant="body2" sx={{ color: '#6B8E7F', fontStyle: 'italic' }}>
+              {wallet.bankLinked}
             </Typography>
             <Typography variant="body2" sx={{ color: '#6B8E7F' }}>
-              Chủ TK: {wallet.accountName || '-'}
+              {wallet.type === 'Bank' ? 'Số TK: ' : 'SĐT: '}{wallet.accountNumber || '-'}
             </Typography>
           </>
         )}
@@ -110,27 +114,12 @@ const AccountManagementPage = () => {
           </Box>
         </Box>
 
-        {/* Ví tiền mặt */}
-        <Typography
-          variant="h5"
-          sx={{ mb: 1, fontWeight: 700, color: '#2E5B47' }}
-        >
+        {/* 1. Ví tiền mặt */}
+        <Typography variant="h5" sx={{ mb: 1, fontWeight: 700, color: '#2E5B47' }}>
           Ví tiền mặt
         </Typography>
-
         {cashWallets.length === 0 ? (
-          <Box
-            sx={{
-              border: '2px dashed #6B8E7F',
-              padding: '16px',
-              borderRadius: '12px',
-              color: '#6B8E7F',
-              fontStyle: 'italic',
-              mb: 4,
-              textAlign: 'center',
-              backgroundColor: 'rgba(107,142,127,0.05)',
-            }}
-          >
+          <Box sx={{ border: '2px dashed #6B8E7F', p: 2, borderRadius: '12px', color: '#6B8E7F', textAlign: 'center', bgcolor: 'rgba(107,142,127,0.05)', mb: 4 }}>
             Bạn chưa có ví tiền mặt
           </Box>
         ) : (
@@ -139,28 +128,12 @@ const AccountManagementPage = () => {
           </Grid>
         )}
 
-
-        {/* Ví điện tử */}
-        <Typography
-          variant="h5"
-          sx={{ mb: 1, fontWeight: 700, color: '#2E5B47' }}
-        >
+        {/* 2. Ví điện tử */}
+        <Typography variant="h5" sx={{ mb: 1, fontWeight: 700, color: '#2E5B47' }}>
           Ví điện tử
         </Typography>
-
         {ewallets.length === 0 ? (
-          <Box
-            sx={{
-              border: '2px dashed #6B8E7F',
-              padding: '16px',
-              borderRadius: '12px',
-              color: '#6B8E7F',
-              fontStyle: 'italic',
-              mb: 4,
-              textAlign: 'center',
-              backgroundColor: 'rgba(107,142,127,0.05)'
-            }}
-          >
+          <Box sx={{ border: '2px dashed #6B8E7F', p: 2, borderRadius: '12px', color: '#6B8E7F', textAlign: 'center', bgcolor: 'rgba(107,142,127,0.05)', mb: 4 }}>
             Bạn chưa có ví điện tử
           </Box>
         ) : (
@@ -169,27 +142,21 @@ const AccountManagementPage = () => {
           </Grid>
         )}
 
-        {/* Liên kết ngân hàng */}
-        <Typography variant="h5" sx={{ mb: 2, fontWeight: 600, color: '#2E5B47' }}>
+        {/* 3. Liên kết ngân hàng (ĐÃ SỬA LỖI Ở ĐÂY) */}
+        <Typography variant="h5" sx={{ mb: 1, fontWeight: 600, color: '#2E5B47' }}>
           Liên kết ngân hàng
         </Typography>
-        <Box
-            sx={{
-              border: '2px dashed #6B8E7F',
-              padding: '16px',
-              borderRadius: '12px',
-              color: '#6B8E7F',
-              fontStyle: 'italic',
-              mb: 4,
-              textAlign: 'center',
-              backgroundColor: 'rgba(107,142,127,0.05)'
-            }}
-          >
-            Chưa có tài khoản ngân hàng
+
+        {/* Kiểm tra: Nếu không có ngân hàng -> Hiện thông báo. Có -> Hiện danh sách */}
+        {bankWallets.length === 0 ? (
+          <Box sx={{ border: '2px dashed #6B8E7F', p: 2, borderRadius: '12px', color: '#6B8E7F', textAlign: 'center', bgcolor: 'rgba(107,142,127,0.05)', mb: 4 }}>
+            Bạn chưa có tài khoản ngân hàng
           </Box>
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          {bankWallets.map(renderWalletCard)}
-        </Grid>
+        ) : (
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            {bankWallets.map(renderWalletCard)}
+          </Grid>
+        )}
 
         {/* Nút thêm ví */}
         <Box sx={{ textAlign: 'center', mt: 4 }}>

@@ -9,7 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/budgets")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:3001")
 public class BudgetController {
 
     @Autowired
@@ -35,11 +35,4 @@ public class BudgetController {
         budgetService.deleteBudget(id);
     }
 
-    // ======================
-    // API thêm chi tiêu
-    // ======================
-    @PostMapping("/{id}/add-spent")
-    public Budget addSpent(@PathVariable Long id, @RequestBody AddSpentRequest request) {
-        return budgetService.addSpent(id, request.getAmount(), request.getMonth());
-    }
 }
