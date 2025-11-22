@@ -9,22 +9,32 @@ import {
   InputAdornment,
   IconButton,
 } from '@mui/material'
-import { Visibility, VisibilityOff, Email, Lock } from '@mui/icons-material'
+import {
+  Visibility,
+  VisibilityOff,
+  Email,
+  Lock,
+  Person,
+  Phone,
+} from '@mui/icons-material'
 import CustomInput from '../components/CustomInput'
 import CustomCard from '../components/CustomCard'
 import backgroundImage from '../assets/nen.png'
 import vissmartLogo from '../assets/Vissmart.png'
-import api from '../api'
+import api from '../api' // <-- THÊM MỚI: Import file axios config
 
-const LoginPage = () => {
+const RegisterPage = () => {
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [formData, setFormData] = useState({
+    fullName: '',
     email: '',
+    phone: '',
     password: '',
+    confirmPassword: '',
   })
-
-  // State hiển thị lỗi nếu đăng nhập thất bại
+  // Thêm state để xử lý lỗi từ backend
   const [error, setError] = useState('')
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,62 +44,56 @@ const LoginPage = () => {
     })
   }
 
+  // ===================================
+  // PHẦN CẬP NHẬT ĐỂ LƯU TÊN
+  // ===================================
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('') // Reset lỗi trước khi gọi API mới
+    setError('') // Xóa lỗi cũ khi submit
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Mật khẩu xác nhận không khớp!')
+      return
+    }
 
     try {
-      const { email, password } = formData
+      // Tách dữ liệu cần gửi (không gửi confirmPassword)
+      const { fullName, email, phone, password } = formData
 
-      // 1. Gọi API đăng nhập
-      const response = await api.post('/auth/login', {
+      // Gọi API đăng ký
+      const response = await api.post('/auth/register', {
+        fullName,
         email,
+        phone,
         password,
       })
 
-      console.log('Login Response:', response.data)
+      // response.data sẽ chứa { token: "...", fullName: "..." }
+      console.log('Đăng ký thành công:', response.data)
 
-      // 2. Lưu token (bắt buộc)
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token)
-      }
+      // 👉 THÊM DÒNG NÀY: LƯU HỌ VÀ TÊN VÀO LOCAL STORAGE
+      localStorage.setItem('userFullName', fullName)
 
-      // 3. LƯU TÊN NGƯỜI DÙNG (Quan trọng để hiện trên Dashboard)
-      // Code này tự động kiểm tra xem backend trả về tên field là gì
-      const backendName = response.data.fullName || response.data.full_name || response.data.name;
-
-      if (backendName) {
-        localStorage.setItem('userFullName', backendName);
-      } else {
-        // Fallback: Nếu API login không trả về tên, thử xem lúc đăng ký có lưu không
-        // Nếu không có gì cả thì Dashboard sẽ hiện "User" mặc định
-        console.warn("API Login không trả về field tên (fullName/full_name).");
-      }
-
-      // 4. Chuyển hướng
-      navigate('/dashboard')
+      // Thông báo và chuyển hướng đến trang đăng nhập
+      alert('Đăng ký thành công! Vui lòng đăng nhập.')
+      navigate('/login')
 
     } catch (err: any) {
-      console.error('Lỗi đăng nhập:', err)
-
-      // Xử lý hiển thị thông báo lỗi ra màn hình
-      if (err.message === 'Network Error') {
-         setError('Không thể kết nối đến máy chủ (Network Error).')
-      } else if (err.response) {
-        // Lỗi từ Backend trả về (ví dụ: 401 Unauthorized)
-        if (err.response.status === 401 || err.response.status === 403) {
-          setError('Email hoặc mật khẩu không chính xác.')
-        } else if (err.response.data && err.response.data.message) {
-          // Nếu backend có trả về message lỗi cụ thể
-          setError(err.response.data.message)
-        } else {
-          setError('Đã có lỗi xảy ra. Vui lòng thử lại.')
-        }
+      // Xử lý lỗi từ backend
+      console.error('Lỗi khi đăng ký:', err)
+      if (err.response && err.response.data && err.response.data.message) {
+        // Nếu backend trả về lỗi cụ thể (ví dụ: Email đã tồn tại)
+        setError(err.response.data.message)
+      } else if (err.message === 'Network Error') {
+         setError('Không thể kết nối đến máy chủ. Vui lòng thử lại sau.')
       } else {
-         setError('Lỗi không xác định. Vui lòng thử lại.')
+        setError('Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.')
       }
     }
   }
+  // ===================================
+  // KẾT THÚC PHẦN CẬP NHẬT
+  // ===================================
 
   return (
     <Box
@@ -116,16 +120,32 @@ const LoginPage = () => {
             }}
           />
           <Typography variant="h5" sx={{ fontWeight: 600, color: 'text.primary' }}>
-            Đăng nhập
+            Đăng ký
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Chào mừng bạn quay trở lại!
+            Tạo tài khoản mới để bắt đầu
           </Typography>
         </Box>
 
         <CustomCard elevation={2}>
           <form onSubmit={handleSubmit}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Các trường Input (fullName, email, phone, password...) */}
+
+              <CustomInput
+                name="fullName"
+                label="Họ và tên"
+                value={formData.fullName}
+                onChange={handleChange}
+                required
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Person color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
               <CustomInput
                 name="email"
@@ -138,6 +158,21 @@ const LoginPage = () => {
                   startAdornment: (
                     <InputAdornment position="start">
                       <Email color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              <CustomInput
+                name="phone"
+                label="Số điện thoại"
+                value={formData.phone}
+                onChange={handleChange}
+                required // Bạn có thể bỏ required nếu SĐT không bắt buộc
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Phone color="action" />
                     </InputAdornment>
                   ),
                 }}
@@ -169,29 +204,35 @@ const LoginPage = () => {
                 }}
               />
 
-              <Box sx={{ textAlign: 'right' }}>
-                <Link
-                  component={RouterLink}
-                  to="/forgot-password"
-                  sx={{
-                    color: 'primary.main',
-                    textDecoration: 'none',
-                    fontSize: '0.9rem',
-                    '&:hover': { textDecoration: 'underline' },
-                  }}
-                >
-                  Quên mật khẩu?
-                </Link>
-              </Box>
+              <CustomInput
+                name="confirmPassword"
+                label="Xác nhận mật khẩu"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Lock color="action" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        edge="end"
+                      >
+                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
-              {/* Hiển thị lỗi nếu có */}
+              {/* THÊM MỚI: Hiển thị lỗi */}
               {error && (
-                <Typography
-                  color="error"
-                  variant="body2"
-                  textAlign="center"
-                  sx={{ backgroundColor: 'rgba(255,0,0,0.1)', p: 1, borderRadius: 1 }}
-                >
+                <Typography color="error" variant="body2" textAlign="center">
                   {error}
                 </Typography>
               )}
@@ -209,19 +250,20 @@ const LoginPage = () => {
                   textTransform: 'none',
                 }}
               >
-                Đăng nhập
+                Đăng ký
               </Button>
 
+              {/* Social Login Section (Giữ nguyên) */}
               <Box sx={{ textAlign: 'center', my: 3 }}>
-                {/* Khu vực Social Login nếu cần */}
+                {/* ... code social ... */}
               </Box>
 
               <Box sx={{ textAlign: 'center', mt: 2 }}>
                 <Typography variant="body2" color="text.secondary">
-                  Chưa có tài khoản?{' '}
+                  Đã có tài khoản?{' '}
                   <Link
                     component={RouterLink}
-                    to="/register"
+                    to="/login"
                     sx={{
                       color: 'primary.main',
                       fontWeight: 600,
@@ -229,16 +271,18 @@ const LoginPage = () => {
                       '&:hover': { textDecoration: 'underline' },
                     }}
                   >
-                    Đăng ký ngay
+                    Đăng nhập ngay
                   </Link>
                 </Typography>
               </Box>
             </Box>
           </form>
         </CustomCard>
+
+        {/* ...Phần Quay lại trang chủ... */}
       </Container>
     </Box>
   )
 }
 
-export default LoginPage
+export default RegisterPage
