@@ -1,4 +1,4 @@
-package com.fintrack.backend.config;
+package com.fintrack.backend.Config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,7 +14,7 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/api/**")
-                        .allowedOrigins("http://localhost:3001") // ✅ FE React
+                        .allowedOrigins("http://localhost:3000") // ✅ FE React
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true); // nếu có cookie/token
