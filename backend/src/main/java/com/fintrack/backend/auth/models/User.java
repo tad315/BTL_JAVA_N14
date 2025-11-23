@@ -1,4 +1,4 @@
-package com.fintrack.backend.models;
+package com.fintrack.backend.auth.models;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;

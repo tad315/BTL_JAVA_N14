@@ -1,7 +1,7 @@
 // Đặt trong package (ví dụ): com.fintrack.backend.exceptions
-package com.fintrack.backend.exceptions;
+package com.fintrack.backend.auth.exceptions;
 
-import com.fintrack.backend.payload.ErrorResponse;
+import com.fintrack.backend.auth.payload.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;

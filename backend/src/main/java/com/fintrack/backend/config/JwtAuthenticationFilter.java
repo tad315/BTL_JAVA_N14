@@ -1,6 +1,6 @@
 package com.fintrack.backend.config; // Hoặc package filters
 
-import com.fintrack.backend.services.JwtService;
+import com.fintrack.backend.auth.services.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

@@ -1,6 +1,6 @@
 package com.fintrack.backend.config; // (Hoặc package Config của bạn)
 
-import com.fintrack.backend.repositories.UserRepository;
+import com.fintrack.backend.auth.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

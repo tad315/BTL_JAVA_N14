@@ -1,4 +1,4 @@
-package com.fintrack.backend.services;
+package com.fintrack.backend.auth.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
