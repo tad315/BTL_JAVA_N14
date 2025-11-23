@@ -2,37 +2,61 @@ package com.fintrack.backend.budget.controller;
 
 import com.fintrack.backend.budget.model.Budget;
 import com.fintrack.backend.budget.service.BudgetService;
+import com.fintrack.backend.auth.models.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/budgets")
-@CrossOrigin(origins = "http://localhost:3001")
 public class BudgetController {
 
     @Autowired
     private BudgetService budgetService;
 
+    // 1. Lấy danh sách Ngân sách (Có hỗ trợ lọc theo tháng ?month=2025-11)
     @GetMapping
-    public List<Budget> getAllBudgets() {
-        return budgetService.getAllBudgets();
+    public ResponseEntity<List<Budget>> getBudgets(
+            @AuthenticationPrincipal User user, // Tự động lấy User từ Token
+            @RequestParam(required = false) String month // Tham số tháng (tùy chọn)
+    ) {
+        // Fallback: Nếu đang test tắt security thì lấy ID = 1
+        Long userId = (user != null) ? user.getId() : 1L;
+
+        return ResponseEntity.ok(budgetService.getBudgets(userId, month));
     }
 
+    // 2. API MỚI: Lấy danh sách tên danh mục (Cho Dropdown không trùng lặp)
+    @GetMapping("/categories-list")
+    public ResponseEntity<List<String>> getUniqueCategories(@AuthenticationPrincipal User user) {
+        Long userId = (user != null) ? user.getId() : 1L;
+        return ResponseEntity.ok(budgetService.getUniqueCategories(userId));
+    }
+
+    // 3. Tạo ngân sách mới
     @PostMapping
-    public Budget createBudget(@RequestBody Budget budget) {
-        return budgetService.createBudget(budget);
+    public ResponseEntity<Budget> createBudget(
+            @AuthenticationPrincipal User user,
+            @RequestBody Budget budget
+    ) {
+        Long userId = (user != null) ? user.getId() : 1L;
+        budget.setUserId(userId); // Tự động gán ngân sách cho người đang đăng nhập
+        return ResponseEntity.ok(budgetService.createBudget(budget));
     }
 
+    // 4. Cập nhật ngân sách
     @PutMapping("/{id}")
-    public Budget updateBudget(@PathVariable Long id, @RequestBody Budget budget) {
-        return budgetService.updateBudget(id, budget);
+    public ResponseEntity<Budget> updateBudget(@PathVariable Long id, @RequestBody Budget budget) {
+        return ResponseEntity.ok(budgetService.updateBudget(id, budget));
     }
 
+    // 5. Xóa ngân sách
     @DeleteMapping("/{id}")
-    public void deleteBudget(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteBudget(@PathVariable Long id) {
         budgetService.deleteBudget(id);
+        return ResponseEntity.noContent().build();
     }
-
 }
