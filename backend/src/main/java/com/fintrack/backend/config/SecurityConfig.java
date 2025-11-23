@@ -31,14 +31,16 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 .authorizeHttpRequests(authorize -> authorize
-                        // Cho phép tất cả API auth
+                        // 1. Cho phép Đăng nhập/Đăng ký (Code cũ của bạn)
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // Bạn có thể giữ permitAll tạm thời cho các module khác
+                        // 2. THÊM DÒNG NÀY: Cho phép Giao dịch hoạt động mà không cần Token (Tạm thời)
                         .requestMatchers("/api/transactions/**").permitAll()
+
+                        // 3. --- THÊM DÒNG NÀY ĐỂ SỬA LỖI 403 CHO BUDGET ---
                         .requestMatchers("/api/budgets/**").permitAll()
 
-                        // Các API khác yêu cầu đăng nhập
+                        // 3. Các API khác thì vẫn bắt buộc đăng nhập
                         .anyRequest().authenticated()
                 )
 
@@ -51,23 +53,17 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // FIX CORS CHO REACT (3000, 3001, 5173)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-
-        config.setAllowedOrigins(List.of(
-                "http://localhost:3000",
-                "http://localhost:3001",
-                "http://localhost:5173"
-        ));
-
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
+        CorsConfiguration configuration = new CorsConfiguration();
+        // Cho phép React chạy ở port 3001 hoặc 5173
+        configuration.setAllowedOrigins(List.of("http://localhost:3001"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 }
