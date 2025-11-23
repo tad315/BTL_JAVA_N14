@@ -192,7 +192,7 @@ const BudgetManagementPage = () => {
               <TableRow sx={{ backgroundColor: "#6B8E7F" }}>
                 <TableCell sx={{ color: "#fff", fontWeight: 600 }}>Danh mục</TableCell>
                 <TableCell sx={{ color: "#fff", fontWeight: 600 }}>Hạn mức</TableCell>
-                <TableCell sx={{ color: "#fff", fontWeight: 600 }}>Đã chi (Tự động)</TableCell>
+                <TableCell sx={{ color: "#fff", fontWeight: 600 }}>Đã chi</TableCell>
                 <TableCell sx={{ color: "#fff", fontWeight: 600 }}>Còn lại</TableCell>
                 <TableCell sx={{ color: "#fff", fontWeight: 600 }}>Tháng</TableCell>
                 {/* ĐÃ XÓA CỘT VÍ */}

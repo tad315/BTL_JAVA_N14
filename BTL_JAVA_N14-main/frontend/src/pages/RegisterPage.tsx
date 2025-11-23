@@ -45,7 +45,7 @@ const RegisterPage = () => {
   }
 
   // ===================================
-  // BẮT ĐẦU PHẦN CẬP NHẬT
+  // PHẦN CẬP NHẬT ĐỂ LƯU TÊN
   // ===================================
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,6 +70,9 @@ const RegisterPage = () => {
 
       // response.data sẽ chứa { token: "...", fullName: "..." }
       console.log('Đăng ký thành công:', response.data)
+
+      // 👉 THÊM DÒNG NÀY: LƯU HỌ VÀ TÊN VÀO LOCAL STORAGE
+      localStorage.setItem('userFullName', fullName)
 
       // Thông báo và chuyển hướng đến trang đăng nhập
       alert('Đăng ký thành công! Vui lòng đăng nhập.')

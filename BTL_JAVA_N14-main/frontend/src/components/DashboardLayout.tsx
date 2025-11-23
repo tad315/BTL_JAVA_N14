@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react'
+import { ReactNode, useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Box,
@@ -101,6 +101,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  // 1. Thêm State để lưu trữ tên người dùng
+  const [userName, setUserName] = useState("User"); // Giá trị mặc định là "User"
+
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
   }
@@ -111,6 +114,19 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       setMobileOpen(false)
     }
   }
+
+  // 2. CẬP NHẬT LOGIC: Dùng useEffect để đọc tên người dùng từ localStorage
+  useEffect(() => {
+    // Đọc tên người dùng từ localStorage (được lưu sau khi đăng ký/đăng nhập)
+    const storedFullName = localStorage.getItem('userFullName');
+
+    if (storedFullName) {
+        // Cập nhật state nếu tìm thấy tên
+        setUserName(storedFullName);
+    }
+    // Nếu không tìm thấy, nó sẽ giữ giá trị mặc định là "User"
+  }, []);
+
 
   const menuItems = [
     { text: 'Trang chủ', icon: <Home />, path: '/dashboard' },
@@ -158,8 +174,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
                 {item.icon}
               </ListItemIcon>
-              <ListItemText 
-                primary={item.text} 
+              <ListItemText
+                primary={item.text}
                 primaryTypographyProps={{ fontSize: '0.95rem' }}
               />
             </StyledListItemButton>
@@ -202,12 +218,13 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           >
             <MenuIcon />
           </IconButton>
-          
+
           <Box sx={{ flex: 1 }} />
-          
+
           <UserSection>
+            {/* 3. Hiển thị userName từ state */}
             <Typography variant="body1" sx={{ color: 'white', fontStyle: 'italic' }}>
-              Xin chào, <strong>User!</strong>
+              Xin chào, <strong>{userName}    </strong>
             </Typography>
             <Avatar
               sx={{
@@ -217,7 +234,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 height: 40,
               }}
             >
-              U
+              {/* Lấy chữ cái đầu tiên của userName */}
+              {userName.charAt(0).toUpperCase()}
             </Avatar>
           </UserSection>
         </Toolbar>

@@ -1,4 +1,4 @@
-package com.fintrack.backend.services;
+package com.fintrack.backend.auth.services;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

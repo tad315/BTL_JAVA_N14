@@ -1,4 +1,4 @@
-package com.fintrack.backend.services;
+package com.fintrack.backend.auth.services;
 
 // ===================================
 // BẮT ĐẦU PHẦN THÊM MỚI (Imports)
@@ -12,8 +12,8 @@ import java.util.Optional;
 // ===================================
 
 // Imports cũ của bạn
-import com.fintrack.backend.models.User;
-import com.fintrack.backend.repositories.UserRepository;
+import com.fintrack.backend.auth.models.User;
+import com.fintrack.backend.auth.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

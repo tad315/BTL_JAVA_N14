@@ -1,4 +1,4 @@
-package com.fintrack.backend.models;
+package com.fintrack.backend.auth.models;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
@@ -10,13 +10,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-// ===================================
-// BẮT ĐẦU PHẦN THÊM MỚI
-// ===================================
 import java.time.LocalDateTime;
-// ===================================
-// KẾT THÚC PHẦN THÊM MỚI
-// ===================================
 import java.util.Collection;
 import java.util.List;
 
@@ -25,44 +19,46 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "users") // Tên bảng trong database
+@Table(name = "users")
 public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
+    // SỬA: Map vào cột 'full_name' trong SQL, bắt buộc có dữ liệu
     @NotBlank
+    @Column(name = "full_name", nullable = false)
     private String fullName;
 
+    // SỬA: Map vào cột 'email', không được null
     @Email
     @NotBlank
-    @Column(unique = true) // Email không được trùng
+    @Column(name = "email", unique = true, nullable = false)
     private String email;
 
+    // SỬA: Map vào cột 'phone', có thể null
+    @Column(name = "phone")
     private String phone;
 
+    // SỬA: Map vào cột 'password', không được null
     @NotBlank
-    private String password; // Sẽ được mã hóa
+    @Column(name = "password", nullable = false)
+    private String password;
 
-    // ===================================
-    // BẮT ĐẦU PHẦN THÊM MỚI
-    // ===================================
-
+    // Đã đúng với SQL mới
     @Column(name = "reset_password_token")
     private String resetPasswordToken;
 
+    // Đã đúng với SQL mới
     @Column(name = "reset_token_expiry")
     private LocalDateTime resetTokenExpiry;
 
-    // ===================================
-    // KẾT THÚC PHẦN THÊM MỚI
-    // ===================================
+    // --- Các phương thức của UserDetails (GIỮ NGUYÊN) ---
 
-    // Các phương thức bắt buộc của UserDetails
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Chúng ta có thể thêm vai trò (ROLE_USER, ROLE_ADMIN) ở đây nếu cần
         return List.of();
     }
 

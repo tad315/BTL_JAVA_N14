@@ -1,6 +1,6 @@
-package com.fintrack.backend.repositories;
+package com.fintrack.backend.auth.repositories;
 
-import com.fintrack.backend.models.User;
+import com.fintrack.backend.auth.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

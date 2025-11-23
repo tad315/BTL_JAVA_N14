@@ -1,7 +1,15 @@
-package com.fintrack.backend.budget.model;
+package com.fintrack.backend.budget.model; // Đảm bảo đúng package của bạn
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data // Tự sinh Getter, Setter, toString...
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "budgets")
 public class Budget {
@@ -10,34 +18,25 @@ public class Budget {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Map thẳng vào cột 'category' (VARCHAR) trong DB
+    @Column(name = "category")
     private String category;
 
     @Column(name = "limit_amount")
     private Double limitAmount;
 
-    private Double spent; // Vẫn giữ cột đã chi để Transaction cộng dồn vào
+    // Cột này để cộng dồn số tiền đã chi tiêu
+    @Column(name = "spent")
+    private Double spent;
 
     @Column(name = "budget_month")
-    private String month;
+    private String month; // Lưu dạng "2023-11" hoặc tùy format bạn chọn
 
+    // Lưu ID người dùng (Khớp với cột user_id trong SQL)
     @Column(name = "user_id")
     private Long userId;
 
-    // --- ĐÃ XÓA walletId ---
-
-    public Budget() {}
-
-    // Getters & Setters (Nhớ xóa get/set của walletId)
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getCategory() { return category; }
-    public void setCategory(String category) { this.category = category; }
-    public Double getLimitAmount() { return limitAmount; }
-    public void setLimitAmount(Double limitAmount) { this.limitAmount = limitAmount; }
-    public Double getSpent() { return spent; }
-    public void setSpent(Double spent) { this.spent = spent; }
-    public String getMonth() { return month; }
-    public void setMonth(String month) { this.month = month; }
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
+    // Nếu sau này muốn dùng wallet_id, chỉ cần uncomment dòng dưới:
+    // @Column(name = "wallet_id")
+    // private Long walletId;
 }

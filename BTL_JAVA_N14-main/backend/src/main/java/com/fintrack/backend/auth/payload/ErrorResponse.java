@@ -1,5 +1,5 @@
 
-package com.fintrack.backend.payload;
+package com.fintrack.backend.auth.payload;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

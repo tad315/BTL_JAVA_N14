@@ -2,7 +2,7 @@ package com.fintrack.backend.auth.controllers;
 
 // ... import các DTOs ...
 import com.fintrack.backend.auth.controllers.dtos.*;
-import com.fintrack.backend.services.AuthService;
+import com.fintrack.backend.auth.services.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
