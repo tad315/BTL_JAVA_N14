@@ -1,4 +1,4 @@
-# 💰 Vissmart – Ứng dụng Quản lý Tài chính Thông minh (Hoàn thiện)
+# 💰 Vissmart – Ứng dụng Quản lý Tài chính Thông minh
 
 <div align="center">
   <img src="frontend/src/assets/Vissmart.png" alt="Vissmart Logo" width="200"/>
@@ -139,7 +139,7 @@ BTL_JAVA_N14-main/
 - Khi cần xuất bản: `git pull origin master`, chạy test/lint, `git commit`, `git push origin master`.
 
 ## 👥 Nhóm thực hiện
-- Nhóm 14 – Java Project Final  
+- Nhóm 14 
   - Backend Engineers: Spring Boot, Security, Analytics  
   - Frontend Engineers: React/MUI/Chart.js  
   - AI Engineer: Gemini integration  
