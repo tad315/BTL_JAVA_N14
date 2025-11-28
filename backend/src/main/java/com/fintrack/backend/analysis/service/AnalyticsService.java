@@ -1,8 +1,8 @@
-package com.fintrack.backend.report.service;
+package com.fintrack.backend.analysis.service;
 
-import com.fintrack.backend.report.dto.ChartDataDTO;
-import com.fintrack.backend.report.dto.FinancialReportDTO;
-import com.fintrack.backend.report.dto.TrendDTO;
+import com.fintrack.backend.analysis.dto.ChartDataDTO;
+import com.fintrack.backend.analysis.dto.FinancialReportDTO;
+import com.fintrack.backend.analysis.dto.TrendDTO;
 import java.util.List;
 
 public interface AnalyticsService {

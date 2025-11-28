@@ -1,4 +1,4 @@
-package com.fintrack.backend.report.dto;
+package com.fintrack.backend.analysis.dto;
 
 import lombok.Data;
 import java.util.Map;

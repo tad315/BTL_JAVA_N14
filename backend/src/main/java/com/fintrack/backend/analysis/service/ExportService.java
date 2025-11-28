@@ -1,6 +1,6 @@
-package com.fintrack.backend.report.service;
+package com.fintrack.backend.analysis.service;
 
-import com.fintrack.backend.report.dto.FinancialReportDTO;
+import com.fintrack.backend.analysis.dto.FinancialReportDTO;
 import org.springframework.stereotype.Service;
 
 import java.util.StringJoiner;
