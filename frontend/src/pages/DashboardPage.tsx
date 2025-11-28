@@ -136,8 +136,9 @@ const DashboardPage = () => {
       ])
 
       // Tính toán pie chart data (phân bố chi tiêu theo category)
+      // Sử dụng TẤT CẢ giao dịch để hiển thị phân bổ chi tiêu tổng quan
       const expenseByCategory: { [key: string]: number } = {}
-      currentMonthTransactions
+      allTransactions
         .filter(t => !t.isIncome && t.category)
         .forEach(t => {
           expenseByCategory[t.category] = (expenseByCategory[t.category] || 0) + (t.amount || 0)
