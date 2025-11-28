@@ -54,21 +54,12 @@ const DashboardPage = () => {
     { title: 'Chi tiêu tháng này', value: '0 VNĐ' },
     { title: 'Số dư hiện tại', value: '0 VNĐ' },
   ])
-  const [pieData, setPieData] = useState<{
-    labels: string[]
-    datasets: {
-      data: number[]
-      backgroundColor: string[]
-      borderWidth: number
-      amounts?: number[] // Thêm để lưu số tiền thực tế
-    }[]
-  }>({
-    labels: [],
+  const [pieData, setPieData] = useState({
+    labels: [] as string[],
     datasets: [{
-      data: [],
+      data: [] as number[],
       backgroundColor: ['#2E5B47', '#4A7C59', '#6B8E7F', '#8BA89D', '#A8C5B8', '#7FA89B'],
       borderWidth: 0,
-      amounts: [],
     }],
   })
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([])
@@ -96,9 +87,6 @@ const DashboardPage = () => {
         return
       }
 
-      console.log('🔍 Fetching dashboard data for userId:', currentUserId)
-      console.log('📅 Current month:', currentMonth)
-
       // Fetch transactions
       const transactionsRes = await api.get('/transactions', {
         params: {
@@ -110,23 +98,20 @@ const DashboardPage = () => {
         }
       })
       const allTransactions: Transaction[] = transactionsRes.data.content || []
-      console.log('📦 All transactions:', allTransactions.length, allTransactions)
+      console.log('📦 All transactions:', allTransactions.length, 'transactions')
 
       // Fetch wallets
       const walletsRes = await api.get('/wallets', {
         params: { userId: currentUserId }
       })
       const wallets: Wallet[] = walletsRes.data || []
-      console.log('💼 Wallets:', wallets.length, wallets)
+      console.log('💼 Wallets:', wallets.length, 'wallets')
 
       // Tính toán stats
-      const currentMonthTransactions = allTransactions.filter(t => {
-        const isMatch = t.transactionDate?.startsWith(currentMonth)
-        console.log(`📊 Transaction ${t.id} (${t.transactionDate}): isCurrentMonth=${isMatch}`)
-        return isMatch
-      })
-      
-      console.log('📅 Current month transactions:', currentMonthTransactions.length, currentMonthTransactions)
+      const currentMonthTransactions = allTransactions.filter(t => 
+        t.transactionDate?.startsWith(currentMonth)
+      )
+      console.log('📅 Current month transactions:', currentMonthTransactions.length, 'for', currentMonth)
       
       const totalIncome = currentMonthTransactions
         .filter(t => t.isIncome)
@@ -138,7 +123,11 @@ const DashboardPage = () => {
       
       const totalBalance = wallets.reduce((sum, w) => sum + (w.balance || 0), 0)
 
-      console.log('💰 Stats:', { totalIncome, totalExpense, totalBalance })
+      console.log('💰 Stats:', {
+        income: totalIncome,
+        expense: totalExpense,
+        balance: totalBalance
+      })
 
       setStats([
         { title: 'Thu nhập tháng này', value: formatCurrency(totalIncome) },
@@ -148,29 +137,23 @@ const DashboardPage = () => {
 
       // Tính toán pie chart data (phân bố chi tiêu theo category)
       const expenseByCategory: { [key: string]: number } = {}
-      const expenseTransactions = currentMonthTransactions.filter(t => !t.isIncome)
-      console.log('💸 Expense transactions for pie chart:', expenseTransactions.length, expenseTransactions)
-      
-      expenseTransactions.forEach(t => {
-        const cat = t.category || 'Khác'
-        expenseByCategory[cat] = (expenseByCategory[cat] || 0) + (t.amount || 0)
-        console.log(`  - ${cat}: +${t.amount} = ${expenseByCategory[cat]}`)
-      })
+      currentMonthTransactions
+        .filter(t => !t.isIncome && t.category)
+        .forEach(t => {
+          expenseByCategory[t.category] = (expenseByCategory[t.category] || 0) + (t.amount || 0)
+        })
+
+      console.log('📊 Expense by category:', expenseByCategory)
 
       const categories = Object.keys(expenseByCategory)
       const amounts = Object.values(expenseByCategory)
-      const totalExpenseForPie = amounts.reduce((sum, a) => sum + a, 0)
-      const percentages = amounts.map(a => totalExpenseForPie > 0 ? Math.round((a / totalExpenseForPie) * 100) : 0)
-
-      console.log('🥧 Pie data:', { categories, amounts, percentages })
 
       setPieData({
         labels: categories,
         datasets: [{
-          data: percentages,
-          backgroundColor: ['#2E5B47', '#4A7C59', '#6B8E7F', '#8BA89D', '#A8C5B8', '#7FA89B', '#B8D4CB', '#C5DED6'],
-          borderWidth: 0,
-          amounts: amounts, // Lưu số tiền thực tế
+          data: amounts,
+          backgroundColor: ['#2E5B47', '#4A7C59', '#6B8E7F', '#8BA89D', '#A8C5B8', '#7FA89B', '#C5D8D1', '#9FB8B0', '#7A9A8F'],
+        borderWidth: 0,
         }],
       })
 
@@ -178,7 +161,7 @@ const DashboardPage = () => {
       setRecentTransactions(allTransactions.slice(0, 5))
 
     } catch (error) {
-      console.error('❌ Error fetching dashboard data:', error)
+      console.error('Error fetching dashboard data:', error)
     } finally {
       setLoading(false)
     }
@@ -194,12 +177,10 @@ const DashboardPage = () => {
       tooltip: {
         callbacks: {
           label: function(context: any) {
-            const label = context.label || 'Khác'
-            const percentage = context.parsed || 0
-            const amounts = context.dataset.amounts || []
-            const amount = amounts[context.dataIndex] || 0
-            const formattedAmount = formatCurrency(amount)
-            return `${label}: ${percentage}% (${formattedAmount})`
+            const value = context.parsed
+            const total = context.dataset.data.reduce((sum: number, val: number) => sum + val, 0)
+            const percentage = total > 0 ? Math.round((value / total) * 100) : 0
+            return context.label + ': ' + formatCurrency(value) + ' (' + percentage + '%)'
           }
         }
       }
@@ -210,19 +191,22 @@ const DashboardPage = () => {
     if (pieData.labels.length === 0) {
       return (
         <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Typography color="text.secondary">Chưa có dữ liệu chi tiêu trong tháng này</Typography>
+          <Typography variant="body2" color="text.secondary">Chưa có dữ liệu chi tiêu trong tháng này</Typography>
         </Box>
       )
     }
+    
+    const total = pieData.datasets[0].data.reduce((sum, val) => sum + val, 0)
+    
     return (
-    <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'space-around', p: 3 }}>
+    <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'space-around', p: 3, flexWrap: 'wrap' }}>
       <Box sx={{ width: 200, height: 200 }}>
         <Pie data={pieData} options={pieOptions} />
       </Box>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxWidth: '60%' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxWidth: 300 }}>
         {pieData.labels.map((label, index) => {
-          const amount = pieData.datasets[0].amounts?.[index] || 0
-          const percentage = pieData.datasets[0].data[index]
+          const amount = pieData.datasets[0].data[index]
+          const percentage = total > 0 ? Math.round((amount / total) * 100) : 0
           return (
             <Box key={label} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Box sx={{ 
@@ -230,14 +214,14 @@ const DashboardPage = () => {
                 height: 16, 
                 borderRadius: '50%', 
                 bgcolor: pieData.datasets[0].backgroundColor[index % pieData.datasets[0].backgroundColor.length],
-                flexShrink: 0
+                flexShrink: 0 
               }} />
-              <Box sx={{ minWidth: 0 }}>
+              <Box sx={{ flex: 1 }}>
                 <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {label} ({percentage}%)
+                  {label}
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                  {formatCurrency(amount)}
+                <Typography variant="caption" color="text.secondary">
+                  {formatCurrency(amount)} ({percentage}%)
                 </Typography>
               </Box>
             </Box>
@@ -271,8 +255,6 @@ const DashboardPage = () => {
     try {
       if (!currentUserId) return
       const currentYear = new Date().getFullYear()
-      console.log('📊 Fetching bar chart data for year:', currentYear)
-      
       const res = await api.get('/transactions', {
         params: {
           userId: currentUserId,
@@ -281,7 +263,6 @@ const DashboardPage = () => {
         }
       })
       const transactions: Transaction[] = res.data.content || []
-      console.log('📈 Transactions for bar chart:', transactions.length)
 
       const monthlyData: { [key: number]: { income: number, expense: number } } = {}
       for (let i = 0; i < 12; i++) {
@@ -291,48 +272,38 @@ const DashboardPage = () => {
       transactions.forEach(t => {
         if (t.transactionDate) {
           const date = new Date(t.transactionDate)
-          const year = date.getFullYear()
-          const month = date.getMonth()
-          
-          if (year === currentYear) {
-            const amountInMillion = (t.amount || 0) / 1000000
+          if (date.getFullYear() === currentYear) {
+            const month = date.getMonth()
             if (t.isIncome) {
-              monthlyData[month].income += amountInMillion
-              console.log(`  📈 Month ${month + 1}: +Income ${amountInMillion.toFixed(2)}tr`)
+              monthlyData[month].income += (t.amount || 0) / 1000000
             } else {
-              monthlyData[month].expense += amountInMillion
-              console.log(`  📉 Month ${month + 1}: +Expense ${amountInMillion.toFixed(2)}tr`)
+              monthlyData[month].expense += (t.amount || 0) / 1000000
             }
-          } else {
-            console.log(`  ⏭️ Skipping transaction from ${year}`)
           }
         }
       })
 
-      const expenseData = Object.values(monthlyData).map(d => Math.round(d.expense * 10) / 10)
-      const incomeData = Object.values(monthlyData).map(d => Math.round(d.income * 10) / 10)
-      
-      console.log('📊 Bar chart data:', { expenseData, incomeData, monthlyData })
+      console.log('📊 Monthly data for bar chart:', monthlyData)
 
       setBarData({
         labels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'],
         datasets: [
           {
             label: 'Chi tiêu',
-            data: expenseData,
-            backgroundColor: '#8BA89D',
+            data: Object.values(monthlyData).map(d => Number(d.expense.toFixed(2))),
+            backgroundColor: '#d32f2f',
             borderRadius: 4,
           },
           {
             label: 'Thu nhập',
-            data: incomeData,
-            backgroundColor: '#2E5B47',
+            data: Object.values(monthlyData).map(d => Number(d.income.toFixed(2))),
+            backgroundColor: '#2e7d32',
             borderRadius: 4,
           },
         ],
       })
     } catch (error) {
-      console.error('❌ Error fetching bar chart data:', error)
+      console.error('Error fetching bar chart data:', error)
     }
   }
 
@@ -355,11 +326,12 @@ const DashboardPage = () => {
         callbacks: {
           label: function(context: any) {
             const value = context.parsed.y
-            if (value === 0) return context.dataset.label + ': 0 VNĐ'
-            if (value < 1) {
+            if (value >= 1) {
+              return context.dataset.label + ': ' + value.toFixed(2) + ' triệu VNĐ'
+            } else if (value > 0) {
               return context.dataset.label + ': ' + (value * 1000).toFixed(0) + ' nghìn VNĐ'
             }
-            return context.dataset.label + ': ' + value.toFixed(1) + ' triệu VNĐ'
+            return context.dataset.label + ': 0 VNĐ'
           }
         }
       }
@@ -369,8 +341,12 @@ const DashboardPage = () => {
         beginAtZero: true,
         ticks: {
           callback: function(value: any) {
-            if (value === 0) return '0'
-            return value + 'tr'
+            if (value >= 1) {
+              return value.toFixed(1) + 'tr'
+            } else if (value > 0) {
+              return (value * 1000).toFixed(0) + 'k'
+            }
+            return '0'
           }
         },
         grid: {
@@ -463,14 +439,12 @@ const DashboardPage = () => {
           {/* Bar Chart */}
           <Grid item xs={12} lg={6}>
             <ChartCard>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Biểu đồ chi tiêu:
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Năm {new Date().getFullYear()}
-                </Typography>
-              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                Thu chi theo tháng:
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+                Năm {new Date().getFullYear()}
+              </Typography>
               <BarChartComponent />
             </ChartCard>
           </Grid>
