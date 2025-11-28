@@ -3,13 +3,12 @@ import {
   Box, Typography, TextField, Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, IconButton,
   InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions,
+  FormControl, InputLabel, Select, MenuItem
 } from "@mui/material";
 import { Search, Edit, Delete } from "@mui/icons-material";
 import DashboardLayout from "../components/DashboardLayout";
-import axios from "axios";
-
-// Cấu hình Base URL
-const API_BASE_URL = "http://localhost:8080/api";
+import EmptyState from "../components/EmptyState";
+import api from "../api";
 
 interface Budget {
   id: number;
@@ -17,10 +16,10 @@ interface Budget {
   limitAmount: number;
   spent: number; // Backend tự tính từ Transaction và gửi về
   month: string;
-  // ĐÃ XÓA walletId
 }
 
 const BudgetManagementPage = () => {
+  const currentUserId = Number(localStorage.getItem('userId')) || null
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,6 +30,25 @@ const BudgetManagementPage = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
 
+  // Danh sách categories mặc định (giống với TransactionManagementPage)
+  const defaultCategories = [
+    'Ăn uống',
+    'Di chuyển',
+    'Mua sắm',
+    'Giải trí',
+    'Y tế',
+    'Giáo dục',
+    'Hóa đơn',
+    'Nhà cửa',
+    'Quần áo',
+    'Làm đẹp',
+    'Thể thao',
+    'Du lịch',
+    'Quà tặng',
+    'Từ thiện',
+    'Khác'
+  ];
+
   // Form dữ liệu (Đã bỏ walletId)
   const [formData, setFormData] = useState({
     category: "",
@@ -39,17 +57,20 @@ const BudgetManagementPage = () => {
   });
 
   useEffect(() => {
+    if (currentUserId) {
     fetchBudgets();
-    // Không cần fetchWallets nữa
-  }, [currentMonth]);
+    } else {
+      setBudgets([]);
+    }
+  }, [currentMonth, currentUserId]);
 
   // --- 1. LẤY DỮ LIỆU ---
   const fetchBudgets = async () => {
+    if (!currentUserId) return;
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/budgets`, {
+      const res = await api.get('/budgets', {
         params: {
-          userId: 1,
           month: currentMonth
         }
       });
@@ -88,20 +109,23 @@ const BudgetManagementPage = () => {
       return;
     }
 
+    if (!currentUserId) {
+      alert("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
+      return;
+    }
+
     const payload = {
       category: formData.category,
       limitAmount: formData.limitAmount,
-      month: formData.month,
-      userId: 1
-      // KHÔNG GỬI walletId nữa
+      month: formData.month
     };
 
     try {
       if (editingBudget) {
-        await axios.put(`${API_BASE_URL}/budgets/${editingBudget.id}`, payload);
+        await api.put(`/budgets/${editingBudget.id}`, payload);
         alert("Cập nhật thành công!");
       } else {
-        await axios.post(`${API_BASE_URL}/budgets`, payload);
+        await api.post('/budgets', payload);
         alert("Tạo ngân sách thành công!");
       }
 
@@ -116,7 +140,7 @@ const BudgetManagementPage = () => {
   const handleDelete = async (id: number) => {
     if (window.confirm("Bạn có chắc muốn xóa ngân sách này không?")) {
       try {
-        await axios.delete(`${API_BASE_URL}/budgets/${id}`);
+        await api.delete(`/budgets/${id}`);
         fetchBudgets();
       } catch (error) {
         console.error("Lỗi xóa:", error);
@@ -133,6 +157,17 @@ const BudgetManagementPage = () => {
   const filteredBudgets = budgets.filter((b) =>
     b.category?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (!currentUserId) {
+    return (
+      <DashboardLayout>
+        <Box>
+          <Typography variant="h6" color="error">Không tìm thấy thông tin người dùng</Typography>
+          <Typography>Vui lòng đăng nhập lại để quản lý ngân sách.</Typography>
+        </Box>
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout>
@@ -239,8 +274,13 @@ const BudgetManagementPage = () => {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} align="center">
-                    Không có ngân sách nào trong tháng {currentMonth}.
+                  <TableCell colSpan={6}>
+                    <EmptyState
+                      title="Chưa có ngân sách"
+                      description={`Bạn chưa tạo ngân sách cho tháng ${currentMonth}.`}
+                      actionText="+ Tạo ngân sách mới"
+                      onAction={handleOpenAdd}
+                    />
                   </TableCell>
                 </TableRow>
               )}
@@ -255,12 +295,19 @@ const BudgetManagementPage = () => {
           </DialogTitle>
 
           <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-            <TextField
-                label="Tên danh mục (VD: Ăn uống)"
+            <FormControl fullWidth required>
+              <InputLabel id="select-category-budget">Danh mục *</InputLabel>
+              <Select
+                labelId="select-category-budget"
                 value={formData.category}
+                label="Danh mục *"
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                fullWidth
-            />
+              >
+                {defaultCategories.map((cat, index) => (
+                  <MenuItem key={index} value={cat}>{cat}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
             <TextField
                 label="Hạn mức chi tiêu (VND)"

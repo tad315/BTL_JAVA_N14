@@ -12,6 +12,7 @@ export default defineConfig({
   },
   server: {
     port: 3001,
+    strictPort: true, // Không tự động tìm port khác nếu 3001 bị chiếm
     open: true,
   },
 })

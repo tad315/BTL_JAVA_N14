@@ -49,7 +49,12 @@ public class AuthService {
         userRepository.save(user);
 
         String token = jwtService.generateToken(user);
-        return AuthResponse.builder().token(token).fullName(user.getFullName()).build();
+        return AuthResponse.builder()
+                .token(token)
+                .fullName(user.getFullName())
+                .userId(user.getId())
+                .email(user.getEmail())
+                .build();
     }
 
     // Logic Đăng nhập
@@ -60,7 +65,12 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng"));
         String token = jwtService.generateToken(user);
-        return AuthResponse.builder().token(token).fullName(user.getFullName()).build();
+        return AuthResponse.builder()
+                .token(token)
+                .fullName(user.getFullName())
+                .userId(user.getId())
+                .email(user.getEmail())
+                .build();
     }
 
     // Logic Quên Mật Khẩu

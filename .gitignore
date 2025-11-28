@@ -89,3 +89,10 @@ Thumbs.db
 # Logs
 logs/
 *.log
+
+# Scripts tạm thời
+*.ps1
+
+# Build output
+dist/
+*.tsbuildinfo

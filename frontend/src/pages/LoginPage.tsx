@@ -54,6 +54,14 @@ const LoginPage = () => {
         localStorage.setItem('token', response.data.token)
       }
 
+      // 2.1. Lưu userId & email để filter dữ liệu đúng người dùng
+      if (response.data.userId) {
+        localStorage.setItem('userId', String(response.data.userId))
+      }
+      if (response.data.email) {
+        localStorage.setItem('userEmail', response.data.email)
+      }
+
       // 3. LƯU TÊN NGƯỜI DÙNG (Quan trọng để hiện trên Dashboard)
       // Code này tự động kiểm tra xem backend trả về tên field là gì
       const backendName = response.data.fullName || response.data.full_name || response.data.name;

@@ -6,6 +6,7 @@ import {
 } from '@mui/material'
 import { Search, Edit, Delete } from '@mui/icons-material'
 import DashboardLayout from '../components/DashboardLayout'
+import EmptyState from '../components/EmptyState'
 import api from '../api';
 
 const modalStyle = {
@@ -22,7 +23,8 @@ const modalStyle = {
 
 interface Transaction {
     id: number;
-    date: string;
+    transactionDate?: string; // Backend dùng transactionDate
+    date?: string; // Fallback
     description: string;
     amount: number;
     category: string;
@@ -46,6 +48,7 @@ interface NewTransactionData {
 }
 
 const TransactionManagementPage = () => {
+    const currentUserId = Number(localStorage.getItem('userId')) || null
     const [searchTerm, setSearchTerm] = useState('')
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -54,6 +57,25 @@ const TransactionManagementPage = () => {
     const [wallets, setWallets] = useState<Wallet[]>([]);
     const [budgetList, setBudgetList] = useState<string[]>([]);
     const [editingId, setEditingId] = useState<number | null>(null);
+
+    // Danh sách categories mặc định
+    const defaultCategories = [
+        'Ăn uống',
+        'Di chuyển',
+        'Mua sắm',
+        'Giải trí',
+        'Y tế',
+        'Giáo dục',
+        'Hóa đơn',
+        'Nhà cửa',
+        'Quần áo',
+        'Làm đẹp',
+        'Thể thao',
+        'Du lịch',
+        'Quà tặng',
+        'Từ thiện',
+        'Khác'
+    ];
 
     const [newTransaction, setNewTransaction] = useState<NewTransactionData>({
         date: new Date().toISOString().split('T')[0],
@@ -68,47 +90,86 @@ const TransactionManagementPage = () => {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
     };
 
-    const formatDate = (dateString: string) => {
+    const formatDate = (dateString: string | undefined) => {
         if (!dateString) return "";
-        const [year, month, day] = dateString.split('-');
+        // Xử lý cả format từ backend (transactionDate) và format cũ (date)
+        const date = dateString.includes('T') ? dateString.split('T')[0] : dateString;
+        const [year, month, day] = date.split('-');
         return `${day}/${month}/${year}`;
     };
 
     const fetchTransactions = async () => {
+        if (!currentUserId) {
+            setTransactions([]);
+            return;
+        }
         setIsLoading(true);
         try {
             const response = await api.get('/transactions', {
                 params: {
                     searchTerm: searchTerm || undefined,
-                    page: 0, limit: 10, sortBy: 'date', order: 'DESC', userId: 1
+                    page: 0, limit: 100, sortBy: 'date', order: 'DESC', userId: currentUserId
                 }
             });
-            setTransactions(response.data.content || []);
-        } catch (error) { console.error(error); }
-        finally { setIsLoading(false); }
+            // Backend trả về Page object, lấy content từ đó
+            const transactionsData = response.data.content || response.data || [];
+            console.log('✅ Fetched transactions from API:', transactionsData.length, 'items');
+            // Map dữ liệu từ backend format sang frontend format
+            const mappedTransactions = transactionsData.map((t: any) => ({
+                id: t.id,
+                date: t.date || t.transactionDate, // Backend trả về 'date' (LocalDate)
+                transactionDate: t.date || t.transactionDate,
+                description: t.description || '',
+                amount: t.amount || 0,
+                category: t.category || '',
+                isIncome: t.isIncome || false,
+                walletId: t.walletId || 0,
+            }));
+            setTransactions(mappedTransactions);
+        } catch (error: any) {
+            console.error('❌ Error fetching transactions:', error);
+            // Nếu lỗi 403, có thể do backend chưa restart hoặc token không hợp lệ
+            if (error.response?.status === 403) {
+                console.error('403 Forbidden - Backend có thể chưa restart sau khi sửa SecurityConfig');
+                alert('Lỗi 403: Backend có thể chưa restart. Vui lòng restart backend và refresh trang.');
+            }
+            setTransactions([]); // Set empty array on error
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const fetchWallets = async () => {
+        if (!currentUserId) return;
         try {
-            const res = await api.get('/wallets');
-            setWallets(res.data);
-        } catch (error) { console.error(error); }
+            const res = await api.get('/wallets', {
+                params: { userId: currentUserId }
+            });
+            setWallets(res.data || []);
+        } catch (error: any) {
+            console.error('Error fetching wallets:', error);
+            setWallets([]);
+        }
     }
 
     const fetchBudgets = async () => {
+        if (!currentUserId) return;
         try {
             const currentMonth = new Date().toISOString().slice(0, 7);
-            const res = await api.get(`/budgets`, { params: { userId: 1, month: currentMonth } });
-            const categories = res.data.map((item: any) => item.category);
+            const res = await api.get(`/budgets`, { params: { userId: currentUserId, month: currentMonth } });
+            const categories = (res.data || []).map((item: any) => item.category);
             setBudgetList(categories);
-        } catch (error) { console.error(error); }
+        } catch (error: any) {
+            console.error('Error fetching budgets:', error);
+            setBudgetList([]);
+        }
     }
 
     useEffect(() => {
         fetchTransactions();
         fetchWallets();
         fetchBudgets();
-    }, [searchTerm]);
+    }, [searchTerm, currentUserId]);
 
     const handleOpenModal = () => {
         setEditingId(null);
@@ -127,8 +188,10 @@ const TransactionManagementPage = () => {
 
     const handleEditClick = (transaction: Transaction) => {
         setEditingId(transaction.id);
+        // Xử lý cả transactionDate (backend) và date (fallback)
+        const dateValue = transaction.transactionDate || transaction.date || new Date().toISOString().split('T')[0];
         setNewTransaction({
-            date: transaction.date,
+            date: dateValue,
             description: transaction.description,
             amount: transaction.amount.toString(),
             category: transaction.category,
@@ -167,8 +230,13 @@ const TransactionManagementPage = () => {
         }
 
         // 3. Chuẩn bị dữ liệu gửi đi
+        if (!currentUserId) {
+            alert('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+            return;
+        }
+
         const dataToSend = {
-            userId: 1,
+            userId: currentUserId,
             date: newTransaction.date,
             description: newTransaction.description,
             amount: amountValue,
@@ -208,6 +276,21 @@ const TransactionManagementPage = () => {
         }
     }
 
+    if (!currentUserId) {
+        return (
+            <DashboardLayout>
+                <Box>
+                    <Typography variant="h6" color="error">
+                        Không tìm thấy thông tin người dùng
+                    </Typography>
+                    <Typography>
+                        Vui lòng đăng nhập lại để xem và quản lý giao dịch của bạn.
+                    </Typography>
+                </Box>
+            </DashboardLayout>
+        )
+    }
+
     return (
         <DashboardLayout>
             <Box>
@@ -243,15 +326,30 @@ const TransactionManagementPage = () => {
                         </TableHead>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={6} align="center"><CircularProgress /></TableCell></TableRow>
+                                <TableRow>
+                                    <TableCell colSpan={6} align="center">
+                                        <CircularProgress size={26} />
+                                    </TableCell>
+                                </TableRow>
                             ) : transactions.length === 0 ? (
-                                <TableRow><TableCell colSpan={6} align="center">Không có dữ liệu.</TableCell></TableRow>
+                                <TableRow>
+                                    <TableCell colSpan={6}>
+                                        <EmptyState
+                                            title="Chưa có giao dịch nào"
+                                            description="Bạn chưa ghi nhận giao dịch nào. Bấm nút bên dưới để thêm giao dịch đầu tiên và bắt đầu theo dõi chi tiêu."
+                                            actionText="+ Thêm giao dịch"
+                                            onAction={handleOpenModal}
+                                        />
+                                    </TableCell>
+                                </TableRow>
                             ) : (
                                 transactions.map((transaction) => {
                                     const wallet = wallets.find(w => w.id === transaction.walletId);
+                                    // Xử lý cả transactionDate (backend) và date (fallback)
+                                    const displayDate = transaction.transactionDate || transaction.date || '';
                                     return (
                                         <TableRow key={transaction.id} hover>
-                                            <TableCell>{formatDate(transaction.date)}</TableCell>
+                                            <TableCell>{formatDate(displayDate)}</TableCell>
                                             <TableCell>{transaction.description}</TableCell>
                                             <TableCell sx={{ color: transaction.isIncome ? '#4CAF50' : '#f44336', fontWeight: 600 }}>
                                                 {transaction.isIncome ? '+' : '-'}{formatCurrency(transaction.amount)}
@@ -326,10 +424,9 @@ const TransactionManagementPage = () => {
                                     label="Danh mục *"
                                     onChange={handleChange}
                                 >
-                                    {budgetList.map((cat, index) => (
-                                        <MenuItem key={index} value={cat}>{cat} (Ngân sách)</MenuItem>
+                                    {defaultCategories.map((cat, index) => (
+                                        <MenuItem key={index} value={cat}>{cat}</MenuItem>
                                     ))}
-                                    <MenuItem value="Khác">Khác</MenuItem>
                                 </Select>
                             </FormControl>
                         )}

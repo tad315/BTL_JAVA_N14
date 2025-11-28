@@ -24,6 +24,9 @@ import { Add, Delete } from '@mui/icons-material'
 import DashboardLayout from '../components/DashboardLayout'
 
 const SettingsPage = () => {
+  // TODO: Module 7 - Configuration & Settings chưa có backend
+  // Giữ mock data tạm thời, sẽ thay thế bằng API sau
+  // User info (MOCK DATA - TẠM THỜI)
   const [userInfo, setUserInfo] = useState({
     name: 'User',
     email: 'user@example.com',
@@ -44,6 +47,8 @@ const SettingsPage = () => {
 
   const [language, setLanguage] = useState('vi')
   
+  // Categories (MOCK DATA - TẠM THỜI)
+  // TODO: Sẽ lấy từ API /api/categories sau
   const [categories, setCategories] = useState([
     'Ăn uống',
     'Sinh hoạt',

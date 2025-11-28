@@ -17,7 +17,10 @@ const ChartCard = styled(Paper)(({ theme }) => ({
   boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
 }))
 
+// TODO: File này có vẻ là version đơn giản của Dashboard
+// Có thể xóa hoặc giữ lại nếu cần
 const DashboardSimple = () => {
+  // MOCK DATA - TẠM THỜI (File này có thể không dùng)
   const stats = [
     { title: 'Thu nhập tháng này', value: '100.000.000.000' },
     { title: 'Chi tiêu tháng này', value: '100.000.000.000' },

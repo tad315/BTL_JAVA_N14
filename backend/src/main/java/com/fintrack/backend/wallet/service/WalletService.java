@@ -13,16 +13,15 @@ public class WalletService {
     @Autowired
     private WalletRepository walletRepository;
 
-    // 1. Lấy tất cả ví (Có thể lọc theo User sau này)
-    public List<Wallet> getAllWallets() {
-        // Tạm thời lấy tất cả, sau này bạn nên dùng findByUserId
-        return walletRepository.findAll();
+    // 1. Lấy ví theo userId (CHỈ LẤY VÍ CỦA USER ĐANG ĐĂNG NHẬP)
+    public List<Wallet> getWalletsByUserId(Long userId) {
+        return walletRepository.findByUserId(userId);
     }
 
     // 2. Tạo ví mới
     public Wallet createWallet(Wallet wallet) {
         if (wallet.getBalance() == null) wallet.setBalance(0.0);
-        if (wallet.getUserId() == null) wallet.setUserId(1L); // Mặc định user 1
+        // userId đã được set từ Controller, không cần fallback
         return walletRepository.save(wallet);
     }
 

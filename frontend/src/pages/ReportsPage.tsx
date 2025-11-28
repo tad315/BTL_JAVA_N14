@@ -18,7 +18,9 @@ import DashboardLayout from '../components/DashboardLayout'
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement)
 
 const ReportsPage = () => {
-  // Dữ liệu biểu đồ tròn
+  // TODO: Module 5 - Analytics & Reporting chưa có backend
+  // Giữ mock data tạm thời, sẽ thay thế bằng API sau
+  // Dữ liệu biểu đồ tròn (MOCK DATA - TẠM THỜI)
   const pieData = {
     labels: ['Ăn uống', 'Sinh hoạt', 'Đi lại', 'Giải trí', 'Giáo dục', 'Y tế'],
     datasets: [
@@ -47,7 +49,7 @@ const ReportsPage = () => {
     },
   }
 
-  // Line Chart Data - Xu hướng chi tiêu theo thời gian
+  // Line Chart Data - Xu hướng chi tiêu theo thời gian (MOCK DATA - TẠM THỜI)
   const lineData = {
     labels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'],
     datasets: [

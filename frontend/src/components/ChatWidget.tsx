@@ -20,6 +20,7 @@ import {
   Minimize,
   Chat,
 } from '@mui/icons-material'
+import { getQuickResponse } from '../services/geminiService'
 
 interface Message {
   id: number
@@ -60,56 +61,15 @@ const ChatWidget = () => {
     }
   }, [isOpen])
 
-  // Mock AI responses
-  const getAIResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase()
-    
-    if (lowerMessage.includes('chi tiêu') || lowerMessage.includes('chi')) {
-      return 'Dựa trên dữ liệu của bạn, tháng này bạn đã chi tiêu 9.909.000 VNĐ. Các hạng mục chi nhiều nhất là: Ăn uống (2.345.000 VNĐ), Sinh hoạt (3.124.000 VNĐ). Bạn có muốn xem chi tiết hơn không?'
-    }
-    
-    if (lowerMessage.includes('tiết kiệm') || lowerMessage.includes('tiết')) {
-      return 'Để tiết kiệm hiệu quả, tôi khuyên bạn nên: 1) Đặt mục tiêu tiết kiệm cụ thể, 2) Theo dõi chi tiêu hàng ngày, 3) Cắt giảm các chi phí không cần thiết. Hiện tại bạn có thể tiết kiệm thêm 15-20% từ chi phí ăn uống.'
-    }
-    
-    if (lowerMessage.includes('thu nhập')) {
-      return 'Tổng thu nhập tháng này của bạn là 15.000.000 VNĐ. Sau khi trừ chi tiêu, bạn còn lại 5.091.000 VNĐ. Đây là một tỷ lệ tiết kiệm khá tốt (34%)!'
-    }
-    
-    if (lowerMessage.includes('ngân sách')) {
-      return 'Bạn đã thiết lập ngân sách cho 6 danh mục. Hiện tại bạn đang sử dụng tốt ngân sách, với một số hạng mục còn dư: Đi lại (còn 757.000 VNĐ), Giải trí (còn 1.000.000 VNĐ).'
-    }
-    
-    if (lowerMessage.includes('phân tích')) {
-      return 'Từ dữ liệu của bạn, tôi thấy: Chi tiêu tháng này tăng 15% so với tháng trước. Nguyên nhân chính là tăng chi phí Ăn uống và Giải trí. Tôi gợi ý bạn nên đặt ngân sách chặt chẽ hơn.'
-    }
-
-    if (lowerMessage.includes('help') || lowerMessage.includes('giúp') || lowerMessage.includes('hướng dẫn')) {
-      return 'Tôi có thể giúp bạn:\n• Xem thông tin thu nhập và chi tiêu\n• Phân tích chi tiêu theo danh mục\n• Đưa ra lời khuyên tiết kiệm\n• Theo dõi ngân sách\n\nHãy hỏi tôi bất cứ điều gì!'
-    }
-
-    if (lowerMessage.includes('đầu tư') || lowerMessage.includes('dau tu')) {
-      return 'Với số tiền tiết kiệm hiện tại 5.091.000 VNĐ, tôi gợi ý:\n1. Quỹ đầu tư chỉ số (Index Fund) - Rủi ro thấp, lợi nhuận 8-10%/năm\n2. Tiết kiệm định kỳ ngân hàng - An toàn, lãi suất 6-7%/năm\n3. Vàng - Bảo toàn giá trị\n\nNên đa dạng hóa danh mục đầu tư!'
-    }
-
-    if (lowerMessage.includes('mục tiêu')) {
-      return 'Hiện tại bạn chưa đặt mục tiêu tiết kiệm cụ thể. Tôi gợi ý bạn nên:\n• Đặt mục tiêu ngắn hạn (3-6 tháng)\n• Xác định số tiền cần tiết kiệm\n• Theo dõi tiến độ hàng tháng\n\nVí dụ: Mua laptop 20 triệu trong 6 tháng = tiết kiệm 3.3 triệu/tháng'
-    }
-
-    if (lowerMessage.includes('so sánh') || lowerMessage.includes('tháng trước')) {
-      return 'So với tháng trước:\n• Thu nhập: Giữ nguyên (15 triệu)\n• Chi tiêu: Tăng 15% (8.6tr → 9.9tr)\n• Tiết kiệm: Giảm 20%\n\nNguyên nhân: Tăng chi phí Ăn uống (+500k) và Giải trí (+800k). Bạn nên kiểm soát 2 hạng mục này!'
-    }
-    
-    return 'Tôi hiểu bạn đang hỏi về "' + userMessage + '". Tôi có thể giúp bạn về quản lý tài chính, phân tích chi tiêu. Bạn có thể hỏi cụ thể hơn được không?'
-  }
-
   const handleSendMessage = async () => {
     if (inputMessage.trim() === '') return
 
+    const userMessageText = inputMessage.trim()
+    
     // Add user message
     const userMessage: Message = {
       id: messages.length + 1,
-      text: inputMessage,
+      text: userMessageText,
       sender: 'user',
       timestamp: new Date(),
     }
@@ -118,22 +78,39 @@ const ChatWidget = () => {
     setInputMessage('')
     setIsTyping(true)
 
-    // Simulate AI response delay
-    setTimeout(() => {
+    try {
+      // Gọi Gemini API
+      const aiResponseText = await getQuickResponse(userMessageText)
+      
       const aiResponse: Message = {
         id: messages.length + 2,
-        text: getAIResponse(inputMessage),
+        text: aiResponseText,
         sender: 'bot',
         timestamp: new Date(),
       }
       setMessages(prev => [...prev, aiResponse])
-      setIsTyping(false)
       
       // If minimized or closed, increment unread
       if (isMinimized || !isOpen) {
         setUnreadCount(prev => prev + 1)
       }
-    }, 1500)
+    } catch (error) {
+      console.error('Error getting AI response:', error)
+      const errorResponse: Message = {
+        id: messages.length + 2,
+        text: '⚠️ Xin lỗi, có lỗi xảy ra khi xử lý yêu cầu của bạn. Vui lòng thử lại sau.',
+        sender: 'bot',
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, errorResponse])
+      
+      // If minimized or closed, increment unread
+      if (isMinimized || !isOpen) {
+        setUnreadCount(prev => prev + 1)
+      }
+    } finally {
+      setIsTyping(false)
+    }
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

@@ -11,6 +11,7 @@ import {
 } from '@mui/material'
 import { Send, SmartToy, Person, AttachFile, Mic } from '@mui/icons-material'
 import DashboardLayout from '../components/DashboardLayout'
+import { getQuickResponse } from '../services/geminiService'
 
 interface Message {
   id: number
@@ -41,45 +42,15 @@ const ChatPage = () => {
     scrollToBottom()
   }, [messages])
 
-  // Mock AI responses
-  const getAIResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase()
-    
-    if (lowerMessage.includes('chi tiêu') || lowerMessage.includes('chi')) {
-      return 'Dựa trên dữ liệu của bạn, tháng này bạn đã chi tiêu 9.909.000 VNĐ. Các hạng mục chi nhiều nhất là: Ăn uống (2.345.000 VNĐ), Sinh hoạt (3.124.000 VNĐ). Bạn có muốn xem chi tiết hơn không?'
-    }
-    
-    if (lowerMessage.includes('tiết kiệm') || lowerMessage.includes('tiết')) {
-      return 'Để tiết kiệm hiệu quả, tôi khuyên bạn nên: 1) Đặt mục tiêu tiết kiệm cụ thể, 2) Theo dõi chi tiêu hàng ngày, 3) Cắt giảm các chi phí không cần thiết. Hiện tại bạn có thể tiết kiệm thêm 15-20% từ chi phí ăn uống.'
-    }
-    
-    if (lowerMessage.includes('thu nhập')) {
-      return 'Tổng thu nhập tháng này của bạn là 15.000.000 VNĐ. Sau khi trừ chi tiêu, bạn còn lại 5.091.000 VNĐ. Đây là một tỷ lệ tiết kiệm khá tốt (34%)!'
-    }
-    
-    if (lowerMessage.includes('ngân sách')) {
-      return 'Bạn đã thiết lập ngân sách cho 6 danh mục. Hiện tại bạn đang sử dụng tốt ngân sách, với một số hạng mục còn dư: Đi lại (còn 757.000 VNĐ), Giải trí (còn 1.000.000 VNĐ). Tuy nhiên, hãy cẩn thận với hạng mục Ăn uống!'
-    }
-    
-    if (lowerMessage.includes('phân tích')) {
-      return 'Từ dữ liệu của bạn, tôi thấy: Chi tiêu tháng này tăng 15% so với tháng trước. Nguyên nhân chính là tăng chi phí Ăn uống và Giải trí. Tôi gợi ý bạn nên đặt ngân sách chặt chẽ hơn cho 2 hạng mục này.'
-    }
-
-    if (lowerMessage.includes('help') || lowerMessage.includes('giúp') || lowerMessage.includes('hướng dẫn')) {
-      return 'Tôi có thể giúp bạn:\n• Xem thông tin thu nhập và chi tiêu\n• Phân tích chi tiêu theo danh mục\n• Đưa ra lời khuyên tiết kiệm\n• Theo dõi ngân sách\n• Dự đoán xu hướng chi tiêu\n\nHãy hỏi tôi bất cứ điều gì về tài chính của bạn!'
-    }
-    
-    // Default response
-    return 'Tôi hiểu bạn đang hỏi về "' + userMessage + '". Tôi có thể giúp bạn về quản lý tài chính, phân tích chi tiêu, và đưa ra lời khuyên tiết kiệm. Bạn có thể hỏi cụ thể hơn được không?'
-  }
-
   const handleSendMessage = async () => {
     if (inputMessage.trim() === '') return
 
+    const userMessageText = inputMessage.trim()
+    
     // Add user message
     const userMessage: Message = {
       id: messages.length + 1,
-      text: inputMessage,
+      text: userMessageText,
       sender: 'user',
       timestamp: new Date(),
     }
@@ -88,17 +59,29 @@ const ChatPage = () => {
     setInputMessage('')
     setIsTyping(true)
 
-    // Simulate AI response delay
-    setTimeout(() => {
+    try {
+      // Gọi Gemini API
+      const aiResponseText = await getQuickResponse(userMessageText)
+      
       const aiResponse: Message = {
         id: messages.length + 2,
-        text: getAIResponse(inputMessage),
+        text: aiResponseText,
         sender: 'bot',
         timestamp: new Date(),
       }
       setMessages(prev => [...prev, aiResponse])
+    } catch (error) {
+      console.error('Error getting AI response:', error)
+      const errorResponse: Message = {
+        id: messages.length + 2,
+        text: '⚠️ Xin lỗi, có lỗi xảy ra khi xử lý yêu cầu của bạn. Vui lòng thử lại sau.',
+        sender: 'bot',
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, errorResponse])
+    } finally {
       setIsTyping(false)
-    }, 1500)
+    }
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

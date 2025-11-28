@@ -9,6 +9,7 @@ import DashboardLayout from '../components/DashboardLayout'
 import api from '../api'
 
 const AddAccountPage = () => {
+  const currentUserId = Number(localStorage.getItem('userId')) || null
   const navigate = useNavigate()
 
   // State quản lý dữ liệu chung
@@ -27,9 +28,15 @@ const AddAccountPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (!currentUserId) {
+      alert('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.')
+      navigate('/login')
+      return
+    }
+
     // Tạo payload cơ bản
     let newWallet: any = {
-      userId: 1,
+      userId: currentUserId,
       type: walletType,
       walletName: walletName, // Luôn lấy từ ô "Tên ví hiển thị"
       balance: Number(initialBalance),
@@ -72,6 +79,17 @@ const AddAccountPage = () => {
       console.error('❌ Lỗi khi tạo ví:', err)
       alert("Có lỗi xảy ra khi tạo ví!")
     }
+  }
+
+  if (!currentUserId) {
+    return (
+      <DashboardLayout>
+        <Box>
+          <Typography variant="h6" color="error">Không tìm thấy thông tin người dùng</Typography>
+          <Typography>Vui lòng đăng nhập lại để thêm ví mới.</Typography>
+        </Box>
+      </DashboardLayout>
+    )
   }
 
   return (

@@ -40,7 +40,10 @@ public class SecurityConfig {
                         // 3. --- THÊM DÒNG NÀY ĐỂ SỬA LỖI 403 CHO BUDGET ---
                         .requestMatchers("/api/budgets/**").permitAll()
 
-                        // 3. Các API khác thì vẫn bắt buộc đăng nhập
+                        // 4. THÊM DÒNG NÀY: Cho phép API Chat AI hoạt động mà không cần Token (Tạm thời)
+                        .requestMatchers("/api/chat/**").permitAll()
+
+                        // 5. Các API khác thì vẫn bắt buộc đăng nhập
                         .anyRequest().authenticated()
                 )
 
@@ -56,11 +59,16 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Cho phép React chạy ở port 3001 hoặc 5173
-        configuration.setAllowedOrigins(List.of("http://localhost:3001"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        // Cho phép React chạy ở nhiều port (3001, 3002, 5173 - Vite default)
+        configuration.setAllowedOrigins(List.of(
+            "http://localhost:3001",
+            "http://localhost:3002",
+            "http://localhost:5173"
+        ));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L); // Cache preflight requests for 1 hour
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

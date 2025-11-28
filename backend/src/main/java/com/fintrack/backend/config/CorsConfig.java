@@ -14,8 +14,12 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/api/**")
-                        .allowedOrigins("http://localhost:3001") // ✅ FE React
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                        .allowedOrigins(
+                            "http://localhost:3001",
+                            "http://localhost:3002",
+                            "http://localhost:5173"
+                        ) // ✅ FE React - Cho phép nhiều port
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                         .allowedHeaders("*")
                         .allowCredentials(true); // nếu có cookie/token
             }

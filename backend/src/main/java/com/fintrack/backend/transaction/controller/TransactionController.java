@@ -2,16 +2,18 @@ package com.fintrack.backend.transaction.controller;
 
 import com.fintrack.backend.transaction.model.Transaction;
 import com.fintrack.backend.transaction.service.TransactionService;
+import com.fintrack.backend.auth.models.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/transactions")
-@CrossOrigin(origins = "http://localhost:3001") // Đổi port này thành port Frontend React của bạn
+@CrossOrigin(origins = {"http://localhost:3001", "http://localhost:3002", "http://localhost:5173"})
 public class TransactionController {
 
     @Autowired
@@ -20,23 +22,31 @@ public class TransactionController {
     // 1. Lấy danh sách (Trả về Page chuẩn của Spring)
     @GetMapping
     public ResponseEntity<Page<Transaction>> getAllTransactions(
+            @AuthenticationPrincipal User user,
             @RequestParam(required = false) String searchTerm,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int limit,
             @RequestParam(defaultValue = "date") String sortBy,
-            @RequestParam(defaultValue = "DESC") Sort.Direction order,
-            @RequestParam(defaultValue = "1") Long userId // Tạm thời hard-code User ID = 1
+            @RequestParam(defaultValue = "DESC") Sort.Direction order
     ) {
+        if (user == null) {
+            return ResponseEntity.status(401).body(null);
+        }
         PageRequest pageable = PageRequest.of(page, limit, Sort.by(order, sortBy));
-        Page<Transaction> result = transactionService.getTransactions(userId, searchTerm, pageable);
+        Page<Transaction> result = transactionService.getTransactions(user.getId(), searchTerm, pageable);
         return ResponseEntity.ok(result);
     }
 
     // 2. Thêm mới
     @PostMapping
-    public ResponseEntity<Transaction> createTransaction(@RequestBody Transaction transaction) {
-        // Đảm bảo User ID luôn được set (sau này lấy từ Token)
-        if (transaction.getUserId() == null) transaction.setUserId(1L);
+    public ResponseEntity<Transaction> createTransaction(
+            @AuthenticationPrincipal User user,
+            @RequestBody Transaction transaction
+    ) {
+        if (user == null) {
+            return ResponseEntity.status(401).body(null);
+        }
+        transaction.setUserId(user.getId()); // Tự động gán userId từ token
 
         Transaction newTransaction = transactionService.createTransaction(transaction);
         return ResponseEntity.status(201).body(newTransaction);

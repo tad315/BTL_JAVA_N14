@@ -115,6 +115,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     }
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('userId')
+    localStorage.removeItem('userFullName')
+    localStorage.removeItem('userEmail')
+    navigate('/login')
+  }
+
   // 2. CẬP NHẬT LOGIC: Dùng useEffect để đọc tên người dùng từ localStorage
   useEffect(() => {
     // Đọc tên người dùng từ localStorage (được lưu sau khi đăng ký/đăng nhập)
@@ -185,7 +193,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
       {/* Logout Button */}
       <Box sx={{ p: 2 }}>
-        <StyledListItemButton onClick={() => navigate('/')}>
+        <StyledListItemButton onClick={handleLogout}>
           <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
             <ExitToApp />
           </ListItemIcon>

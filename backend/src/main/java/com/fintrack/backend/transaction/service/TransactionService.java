@@ -5,6 +5,10 @@ import com.fintrack.backend.transaction.model.Transaction;
 import com.fintrack.backend.transaction.repository.TransactionRepository;
 import com.fintrack.backend.wallet.repository.WalletRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,17 +22,28 @@ public class TransactionService {
     @Autowired
     private BudgetRepository budgetRepository;
 
-    public org.springframework.data.domain.Page<Transaction> getTransactions(Long userId, String searchTerm, org.springframework.data.domain.Pageable pageable) {
+    // === ĐÃ SỬA: SẮP XẾP DATE GIẢM DẦN + ID GIẢM DẦN ===
+    public Page<Transaction> getTransactions(Long userId, String searchTerm, Pageable pageable) {
+        // Tạo lại Pageable với quy tắc ưu tiên: Ngày mới nhất -> Nhập sau (ID lớn)
+        Pageable sortedPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(
+                        Sort.Order.desc("date"),
+                        Sort.Order.desc("id")
+                )
+        );
+
         if (searchTerm != null && !searchTerm.isEmpty()) {
-            return transactionRepository.searchTransactions(userId, searchTerm, pageable);
+            return transactionRepository.searchTransactions(userId, searchTerm, sortedPageable);
         }
-        return transactionRepository.findByUserId(userId, pageable);
+        return transactionRepository.findByUserId(userId, sortedPageable);
     }
 
     // === 1. TẠO GIAO DỊCH ===
     @Transactional
     public Transaction createTransaction(Transaction transaction) {
-        if (transaction.getUserId() == null) transaction.setUserId(1L); // Nên lấy từ Token thay vì hardcode 1L
+        if (transaction.getUserId() == null) transaction.setUserId(1L);
 
         Transaction saved = transactionRepository.save(transaction);
 
@@ -46,7 +61,7 @@ public class TransactionService {
         }
 
         // Cập nhật ngân sách
-        updateBudget(transaction, false); // false = cộng dồn (chi tiêu mới)
+        updateBudget(transaction, false); // false = cộng dồn
 
         return saved;
     }
@@ -57,8 +72,7 @@ public class TransactionService {
         Transaction existing = transactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Giao dịch không tồn tại"));
 
-        // 1. Hoàn tác dữ liệu cũ (Revert)
-        // Hoàn tiền ví cũ
+        // 1. Hoàn tác dữ liệu cũ
         if (existing.getWalletId() != null) {
             walletRepository.findById(existing.getWalletId()).ifPresent(w -> {
                 double amount = existing.getAmount().doubleValue();
@@ -67,8 +81,7 @@ public class TransactionService {
                 walletRepository.save(w);
             });
         }
-        // Hoàn ngân sách cũ
-        updateBudget(existing, true); // true = trừ đi (hoàn tác)
+        updateBudget(existing, true); // true = hoàn tác ngân sách cũ
 
         // 2. Cập nhật thông tin mới
         existing.setDate(details.getDate());
@@ -79,7 +92,6 @@ public class TransactionService {
         existing.setWalletId(details.getWalletId());
 
         // 3. Áp dụng dữ liệu mới
-        // Trừ ví mới
         if (existing.getWalletId() != null) {
             walletRepository.findById(existing.getWalletId()).ifPresent(w -> {
                 double amount = existing.getAmount().doubleValue();
@@ -88,52 +100,42 @@ public class TransactionService {
                 walletRepository.save(w);
             });
         }
-        // Cộng ngân sách mới
-        updateBudget(existing, false);
+        updateBudget(existing, false); // false = cộng ngân sách mới
 
         return transactionRepository.save(existing);
     }
 
-    // === 3. XÓA GIAO DỊCH (SỬA LỖI Ở ĐÂY) ===
+    // === 3. XÓA GIAO DỊCH ===
     @Transactional
     public void deleteTransaction(Long id) {
         Transaction t = transactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Giao dịch không tồn tại"));
 
-        // 1. Hoàn tiền vào ví
+        // Hoàn tiền vào ví
         if (t.getWalletId() != null) {
             walletRepository.findById(t.getWalletId()).ifPresent(w -> {
                 double amount = t.getAmount().doubleValue();
-                // Nếu là thu nhập -> Xóa đi thì phải trừ tiền trong ví
                 if (t.isIncome()) {
                     w.setBalance(w.getBalance() - amount);
-                }
-                // Nếu là chi tiêu -> Xóa đi thì phải cộng lại tiền vào ví
-                else {
+                } else {
                     w.setBalance(w.getBalance() + amount);
                 }
                 walletRepository.save(w);
             });
         }
 
-        // 2. Trừ bớt tiền đã chi trong Ngân sách
-        // (Chỉ áp dụng với khoản Chi tiêu, không áp dụng Thu nhập)
+        // Trừ bớt tiền đã chi trong Ngân sách
         updateBudget(t, true); // true = isRevert (Trừ đi)
 
         transactionRepository.deleteById(id);
     }
 
-    // === HÀM PHỤ TRỢ: CẬP NHẬT NGÂN SÁCH CHUNG ===
-    // isRevert = true -> Trừ đi số tiền (Dùng khi Xóa hoặc Sửa cái cũ)
-    // isRevert = false -> Cộng thêm số tiền (Dùng khi Tạo mới hoặc Sửa cái mới)
+    // === HÀM PHỤ TRỢ: CẬP NHẬT NGÂN SÁCH ===
     private void updateBudget(Transaction t, boolean isRevert) {
         if (t.isIncome()) return; // Thu nhập không ảnh hưởng ngân sách
 
         try {
-            // Lấy tháng dạng YYYY-MM
             String month = t.getDate().toString().substring(0, 7);
-
-            // Trim() category để tránh lỗi thừa khoảng trắng
             String category = t.getCategory().trim();
 
             budgetRepository.findByUserIdAndMonthAndCategory(t.getUserId(), month, category)
@@ -144,10 +146,12 @@ public class TransactionService {
                         if (isRevert) {
                             // Trừ đi (khi xóa giao dịch)
                             b.setSpent(Math.max(0, currentSpent - amount));
+                            // ĐÃ KHÔI PHỤC LOG
                             System.out.println("Đã trừ ngân sách: " + category + " | -" + amount);
                         } else {
                             // Cộng thêm (khi tạo giao dịch)
                             b.setSpent(currentSpent + amount);
+                            // ĐÃ KHÔI PHỤC LOG
                             System.out.println("Đã cộng ngân sách: " + category + " | +" + amount);
                         }
                         budgetRepository.save(b);

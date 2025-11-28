@@ -23,17 +23,19 @@ public class BudgetController {
             @AuthenticationPrincipal User user, // Tự động lấy User từ Token
             @RequestParam(required = false) String month // Tham số tháng (tùy chọn)
     ) {
-        // Fallback: Nếu đang test tắt security thì lấy ID = 1
-        Long userId = (user != null) ? user.getId() : 1L;
-
-        return ResponseEntity.ok(budgetService.getBudgets(userId, month));
+        if (user == null) {
+            return ResponseEntity.status(401).body(null);
+        }
+        return ResponseEntity.ok(budgetService.getBudgets(user.getId(), month));
     }
 
     // 2. API MỚI: Lấy danh sách tên danh mục (Cho Dropdown không trùng lặp)
     @GetMapping("/categories-list")
     public ResponseEntity<List<String>> getUniqueCategories(@AuthenticationPrincipal User user) {
-        Long userId = (user != null) ? user.getId() : 1L;
-        return ResponseEntity.ok(budgetService.getUniqueCategories(userId));
+        if (user == null) {
+            return ResponseEntity.status(401).body(null);
+        }
+        return ResponseEntity.ok(budgetService.getUniqueCategories(user.getId()));
     }
 
     // 3. Tạo ngân sách mới
@@ -42,8 +44,10 @@ public class BudgetController {
             @AuthenticationPrincipal User user,
             @RequestBody Budget budget
     ) {
-        Long userId = (user != null) ? user.getId() : 1L;
-        budget.setUserId(userId); // Tự động gán ngân sách cho người đang đăng nhập
+        if (user == null) {
+            return ResponseEntity.status(401).body(null);
+        }
+        budget.setUserId(user.getId()); // Tự động gán ngân sách cho người đang đăng nhập
         return ResponseEntity.ok(budgetService.createBudget(budget));
     }
 
