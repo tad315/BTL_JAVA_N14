@@ -109,16 +109,14 @@ const DashboardPage = () => {
       const wallets: Wallet[] = walletsRes.data || []
       console.log('💼 Wallets:', wallets.length, 'wallets')
 
-      // Tính toán stats - Kiểm tra cả transactionDate và date field
+      // Tính toán stats - Backend trả về field 'date' (LocalDate)
       const currentMonthTransactions = allTransactions.filter(t => {
-        const txDate = t.transactionDate || t.date
-        const matches = txDate && txDate.startsWith(currentMonth)
-        if (txDate) {
-          console.log(`🔍 Checking: ${txDate} starts with ${currentMonth}? ${matches}`)
-        }
+        const txDate = t.date || t.transactionDate
+        const matches = txDate && String(txDate).startsWith(currentMonth)
         return matches
       })
       console.log('📅 Current month transactions:', currentMonthTransactions.length, 'for', currentMonth)
+      console.log('📅 Sample matched transaction:', currentMonthTransactions[0])
       
       const totalIncome = currentMonthTransactions
         .filter(t => t.isIncome)
@@ -280,13 +278,11 @@ const DashboardPage = () => {
       }
 
       transactions.forEach(t => {
-        const dateStr = t.transactionDate || t.date
+        const dateStr = t.date || t.transactionDate
         if (dateStr) {
           const date = new Date(dateStr)
           const year = date.getFullYear()
           const month = date.getMonth()
-          
-          console.log(`📅 Transaction: ${dateStr} -> Year: ${year}, Month: ${month}, Amount: ${t.amount}, Income: ${t.isIncome}`)
           
           if (year === currentYear) {
             if (t.isIncome) {
@@ -297,6 +293,8 @@ const DashboardPage = () => {
           }
         }
       })
+      
+      console.log(`📊 Processed ${transactions.length} transactions for year ${currentYear}`)
 
       console.log('📊 Monthly data for bar chart:', monthlyData)
 
@@ -385,7 +383,10 @@ const DashboardPage = () => {
   const formatDate = (dateString: string) => {
     if (!dateString) return ''
     const date = new Date(dateString)
-    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}/${month}/${year}`
   }
 
   if (!currentUserId) {
@@ -510,7 +511,7 @@ const DashboardPage = () => {
                   recentTransactions.map((transaction) => (
                     <TableRow key={transaction.id}>
                     <TableCell sx={{ borderBottom: '1px dashed #ddd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                        {formatDate(transaction.transactionDate || transaction.date || '')}
+                        {formatDate(transaction.date || transaction.transactionDate || '')}
                     </TableCell>
                     <TableCell sx={{ borderBottom: '1px dashed #ddd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         {transaction.description || 'Không có mô tả'}
