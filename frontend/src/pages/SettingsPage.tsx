@@ -13,6 +13,8 @@ import {
   DialogActions,
   DialogContentText,
   Snackbar,
+  Stack,
+  Link as MuiLink,
 } from '@mui/material'
 import DashboardLayout from '../components/DashboardLayout'
 
@@ -36,6 +38,7 @@ const SettingsPage = () => {
     newPassword: '',
     confirmPassword: '',
   })
+  const [geminiKey, setGeminiKey] = useState('')
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' })
@@ -43,6 +46,10 @@ const SettingsPage = () => {
   // Load user profile từ API
   useEffect(() => {
     fetchUserProfile()
+    if (typeof window !== 'undefined') {
+      const storedKey = localStorage.getItem('vissmartGeminiApiKey') || ''
+      setGeminiKey(storedKey)
+    }
   }, [])
 
   const getAuthToken = () => {
@@ -214,6 +221,24 @@ const SettingsPage = () => {
     }
   }
 
+  const handleSaveGeminiKey = () => {
+    const trimmed = geminiKey.trim()
+    if (!trimmed) {
+      showSnackbar('Vui lòng nhập API key hợp lệ', 'error')
+      return
+    }
+    localStorage.setItem('vissmartGeminiApiKey', trimmed)
+    window.dispatchEvent(new Event('geminiApiKeyUpdated'))
+    showSnackbar('Đã lưu API key cho Chat AI!', 'success')
+  }
+
+  const handleClearGeminiKey = () => {
+    localStorage.removeItem('vissmartGeminiApiKey')
+    window.dispatchEvent(new Event('geminiApiKeyUpdated'))
+    setGeminiKey('')
+    showSnackbar('Đã xóa API key đã lưu', 'success')
+  }
+
   return (
     <DashboardLayout>
       <Box>
@@ -352,6 +377,54 @@ const SettingsPage = () => {
                   Xóa tài khoản
                 </Button>
               </Box>
+            </Paper>
+          </Grid>
+
+          {/* Cấu hình API Gemini */}
+          <Grid item xs={12}>
+            <Paper sx={{ p: 3, borderRadius: 2, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)' }}>
+              <Typography variant="h6" sx={{ mb: 2, color: '#2E5B47', fontWeight: 600 }}>
+                Chat AI - Gemini API Key
+              </Typography>
+              <Stack spacing={2}>
+                <Alert severity="info">
+                  <Typography variant="body2">
+                    Paste API key từ <MuiLink href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">Google AI Studio</MuiLink>.
+                    Nếu bạn đã cấu hình trong file <code>.env</code>, phần này có thể bỏ qua.
+                  </Typography>
+                </Alert>
+                <TextField
+                  label="Gemini API Key"
+                  type="password"
+                  value={geminiKey}
+                  onChange={(e) => setGeminiKey(e.target.value)}
+                  fullWidth
+                />
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <Button
+                    variant="contained"
+                    onClick={handleSaveGeminiKey}
+                    sx={{ backgroundColor: '#6B8E7F', '&:hover': { backgroundColor: '#2E5B47' } }}
+                  >
+                    Lưu API Key
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    onClick={handleClearGeminiKey}
+                  >
+                    Xóa API Key đã lưu
+                  </Button>
+                  <Button
+                    variant="text"
+                    component="a"
+                    href="https://github.com/tad315/BTL_JAVA_N14/blob/master/frontend/README_GEMINI_SETUP.md"
+                    target="_blank"
+                  >
+                    Xem hướng dẫn chi tiết
+                  </Button>
+                </Stack>
+              </Stack>
             </Paper>
           </Grid>
         </Grid>

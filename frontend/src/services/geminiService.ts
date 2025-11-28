@@ -1,30 +1,36 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { resolveGeminiApiKey } from '../utils/geminiKey'
+import type { AiContextResponse } from './chatContextService'
 
-// Khởi tạo Gemini AI
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyBuyIziYiRfOfADiwBjRtXr7U3Hb_VbaCg'
-const genAI = new GoogleGenerativeAI(API_KEY)
-
-// Model configuration
-const model = genAI.getGenerativeModel({ 
-  model: 'gemini-2.5-flash',
-  generationConfig: {
-    temperature: 0.7,
-    topK: 40,
-    topP: 0.95,
-    maxOutputTokens: 2048, // Tăng từ 1024 lên 2048
-  },
-})
+const createModel = (apiKey: string) => {
+  const client = new GoogleGenerativeAI(apiKey)
+  return client.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    generationConfig: {
+      temperature: 0.7,
+      topK: 40,
+      topP: 0.95,
+      maxOutputTokens: 2048,
+    },
+  })
+}
 
 // System prompt for financial assistant
-const SYSTEM_PROMPT = `Bạn là Vissmart AI - trợ lý thông minh đa năng. 
-Chuyên môn chính của bạn là quản lý tài chính cá nhân, nhưng bạn cũng có thể:
-- Trả lời câu hỏi về nhiều chủ đề khác nhau
-- Trò chuyện một cách thân thiện và tự nhiên
-- Đưa ra lời khuyên về tài chính, đầu tư, tiết kiệm
-- Giúp phân tích chi tiêu và ngân sách
-- Trả lời các câu hỏi tổng quát
+const SYSTEM_PROMPT = `Bạn là Vissmart AI - trợ lý tài chính cá nhân.
+- Luôn trả lời bằng tiếng Việt, giọng điệu thân thiện và dễ hiểu.
+- Nếu tôi cung cấp phần "DỮ LIỆU CÁ NHÂN", bạn PHẢI ưu tiên dùng các con số trong đó để trả lời. Chỉ khi thiếu dữ liệu mới được suy luận chung chung.
+- Khi đưa ra lời khuyên, hãy chỉ ra cơ sở dựa trên dữ liệu vừa nhận được (ví dụ trích dẫn danh mục, số tiền, phần trăm,...).
+- Nếu câu hỏi không liên quan đến tài chính, vẫn trả lời như một trợ lý AI thông minh nhưng tránh đề cập tới dữ liệu cá nhân.`
 
-Hãy trả lời một cách thân thiện, rõ ràng và bằng tiếng Việt. Luôn sẵn sàng giúp đỡ người dùng!`
+const currencyFormatter = new Intl.NumberFormat('vi-VN', {
+  style: 'currency',
+  currency: 'VND',
+})
+
+const percentFormatter = new Intl.NumberFormat('vi-VN', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+})
 
 interface Message {
   role: 'user' | 'model'
@@ -95,9 +101,11 @@ export const sendMessageToGemini = async (
 ): Promise<string> => {
   try {
     // Kiểm tra API key
-    if (!API_KEY) {
+    const apiKey = resolveGeminiApiKey()
+    if (!apiKey) {
       throw new Error('API key chưa được cấu hình. Vui lòng thêm VITE_GEMINI_API_KEY vào file .env')
     }
+    const model = createModel(apiKey)
 
     // Tạo prompt với lịch sử hội thoại
     const chat = model.startChat({
@@ -140,22 +148,29 @@ export const sendMessageToGemini = async (
 /**
  * Lấy phản hồi nhanh từ Gemini với prompt đơn giản
  */
-export const getQuickResponse = async (userMessage: string): Promise<string> => {
+export const getQuickResponse = async (
+  userMessage: string,
+  context?: AiContextResponse
+): Promise<string> => {
   try {
+    const apiKey = resolveGeminiApiKey()
+
     console.log('🔵 ===== START API CALL =====')
-    console.log('🔵 API Key:', API_KEY ? `${API_KEY.substring(0, 10)}...` : 'Not found')
+    console.log('🔵 API Key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'Not found')
     console.log('🔵 User message:', userMessage)
     
-    if (!API_KEY) {
+    if (!apiKey) {
       console.log('⚠️ No API key, using mock response')
       return getMockResponse(userMessage)
     }
 
-    const prompt = `${SYSTEM_PROMPT}\n\nNgười dùng hỏi: "${userMessage}"\n\nHãy trả lời một cách tự nhiên và chi tiết theo câu hỏi của người dùng:`
+    const contextBlock = buildContextSection(context)
+    const prompt = `${SYSTEM_PROMPT}\n\n${contextBlock}\n\nNgười dùng hỏi: "${userMessage}"\n\nHãy trả lời một cách tự nhiên, dẫn chứng từ dữ liệu (nếu có) và kết thúc bằng một gợi ý hành động ngắn gọn.`
     
     console.log('🔄 Calling Gemini API...')
-    console.log('🔄 Model:', model)
     
+    const model = createModel(apiKey)
+    console.log('🔄 Model initialized')
     const result = await model.generateContent(prompt)
     console.log('📦 Raw result:', result)
     
@@ -242,6 +257,95 @@ const getMockResponse = (userMessage: string): string => {
   }
   
   return `Tôi hiểu bạn đang hỏi về "${userMessage}". Tôi có thể giúp bạn về quản lý tài chính, phân tích chi tiêu. Bạn có thể hỏi cụ thể hơn được không?`
+}
+
+const formatCurrency = (value?: number) => {
+  if (value === undefined || value === null || Number.isNaN(value)) {
+    return currencyFormatter.format(0)
+  }
+  return currencyFormatter.format(value)
+}
+
+const formatPercent = (value?: number) => {
+  if (value === undefined || value === null || Number.isNaN(value)) {
+    return '0%'
+  }
+  return `${percentFormatter.format(value)}%`
+}
+
+const buildContextSection = (context?: AiContextResponse) => {
+  if (!context) {
+    return 'Không có dữ liệu cá nhân được cung cấp cho câu hỏi này.'
+  }
+
+  const lines: string[] = []
+  lines.push('=== DỮ LIỆU CÁ NHÂN NGƯỜI DÙNG ===')
+  lines.push(`Người dùng: ${context.userName || 'Chưa có tên'}`)
+  lines.push(`Thời gian mặc định: ${context.month || 'Không xác định'}`)
+
+  if (context.summary) {
+    lines.push(
+      `Tổng thu nhập tháng: ${formatCurrency(context.summary.totalIncome)}, ` +
+      `Tổng chi: ${formatCurrency(context.summary.totalExpense)}, ` +
+      `Chênh lệch: ${formatCurrency(context.summary.netIncome)}, ` +
+      `Tỷ lệ tiết kiệm: ${formatPercent(context.summary.savingRate)}, ` +
+      `Chi bình quân/ngày: ${formatCurrency(context.summary.averageDailyExpense)}`
+    )
+  }
+
+  if (context.wallets?.length) {
+    lines.push('Số dư các ví:')
+    context.wallets.forEach(wallet => {
+      lines.push(`- ${wallet.name || 'Ví không tên'}: ${formatCurrency(wallet.balance)} (${wallet.type || 'Không rõ'})`)
+    })
+  } else {
+    lines.push('Người dùng chưa tạo ví nào.')
+  }
+
+  if (context.budgets?.length) {
+    const criticalBudgets = context.budgets.filter(b =>
+      b.status === 'OVER_LIMIT' || b.status === 'NEAR_LIMIT'
+    )
+    if (criticalBudgets.length > 0) {
+      lines.push('Ngân sách cần chú ý:')
+      criticalBudgets.forEach(budget => {
+        lines.push(
+          `- ${budget.category}: đã dùng ${formatPercent(budget.utilization)} (đã chi ${formatCurrency(budget.spent)} / hạn mức ${formatCurrency(budget.limitAmount)})`
+        )
+      })
+    } else {
+      lines.push('Các ngân sách khác đang trong trạng thái an toàn.')
+    }
+  } else {
+    lines.push('Chưa có ngân sách được thiết lập.')
+  }
+
+  if (context.topCategories?.length) {
+    lines.push('Danh mục chi tiêu lớn:')
+    context.topCategories.forEach(cat => {
+      lines.push(`- ${cat.category}: ${formatCurrency(cat.amount)} (${formatPercent(cat.percentage)})`)
+    })
+  }
+
+  if (context.recentTransactions?.length) {
+    lines.push('Giao dịch gần nhất:')
+    context.recentTransactions.slice(0, 5).forEach(tx => {
+      lines.push(
+        `- ${tx.date ?? 'Không rõ ngày'} | ${tx.category || (tx.income ? 'Thu nhập' : 'Chi tiêu')} | ` +
+        `${tx.income ? '+' : '-'}${formatCurrency(tx.amount)} | ${tx.description || 'Không có ghi chú'}`
+      )
+    })
+  }
+
+  if (context.alerts?.length) {
+    lines.push('Cảnh báo:')
+    context.alerts.forEach(alert => lines.push(`- ${alert}`))
+  }
+
+  lines.push(`Cập nhật lần cuối: ${context.lastUpdated}`)
+  lines.push('=== HẾT DỮ LIỆU CÁ NHÂN ===')
+
+  return lines.join('\n')
 }
 
 export default {

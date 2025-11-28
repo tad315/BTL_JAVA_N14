@@ -12,6 +12,7 @@ import {
 import { Send, SmartToy, Person, AttachFile, Mic } from '@mui/icons-material'
 import DashboardLayout from '../components/DashboardLayout'
 import { getQuickResponse } from '../services/geminiService'
+import { fetchChatContext, type AiContextResponse } from '../services/chatContextService'
 
 interface Message {
   id: number
@@ -31,6 +32,7 @@ const ChatPage = () => {
   ])
   const [inputMessage, setInputMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [latestContext, setLatestContext] = useState<AiContextResponse | null>(null)
   const messagesEndRef = useRef<null | HTMLDivElement>(null)
 
   // Auto scroll to bottom when new message
@@ -60,8 +62,16 @@ const ChatPage = () => {
     setIsTyping(true)
 
     try {
+      let contextData: AiContextResponse | null = null
+      try {
+        contextData = await fetchChatContext(userMessageText)
+        setLatestContext(contextData)
+      } catch (contextError) {
+        console.warn('Không lấy được dữ liệu cá nhân cho chatbot:', contextError)
+      }
+
       // Gọi Gemini API
-      const aiResponseText = await getQuickResponse(userMessageText)
+      const aiResponseText = await getQuickResponse(userMessageText, contextData ?? latestContext ?? undefined)
       
       const aiResponse: Message = {
         id: messages.length + 2,

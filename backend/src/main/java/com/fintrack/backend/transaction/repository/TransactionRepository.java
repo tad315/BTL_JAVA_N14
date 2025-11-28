@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
@@ -21,6 +23,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             Pageable pageable
     );
     Page<Transaction> findByUserId(Long userId, Pageable pageable);
+
+    List<Transaction> findTop5ByUserIdOrderByDateDesc(Long userId);
+
+    List<Transaction> findByUserIdAndDateBetweenOrderByDateDesc(Long userId, LocalDate start, LocalDate end);
 
     @Query("SELECT SUM(t.amount) FROM Transaction t " +
             "WHERE t.userId = :userId " +
