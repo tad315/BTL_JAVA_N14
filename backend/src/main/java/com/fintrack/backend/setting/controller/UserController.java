@@ -50,4 +50,16 @@ public class UserController {
             return ResponseEntity.badRequest().body(errorResponse);
         }
     }
+
+    @DeleteMapping("/account")
+    public ResponseEntity<?> deleteAccount() {
+        try {
+            Map<String, Object> result = userSettingsService.deleteUserAccount();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
 }

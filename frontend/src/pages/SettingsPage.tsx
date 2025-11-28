@@ -151,11 +151,28 @@ const SettingsPage = () => {
       })
 
       if (response.ok) {
-        showSnackbar('Dữ liệu đang được sao lưu...', 'success')
+        const data = await response.json()
+        
+        // Tạo file JSON để download
+        const dataStr = JSON.stringify(data, null, 2)
+        const dataBlob = new Blob([dataStr], { type: 'application/json' })
+        
+        // Tạo link download
+        const url = window.URL.createObjectURL(dataBlob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `vissmart-backup-${Date.now()}.json`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+        
+        showSnackbar('Dữ liệu đã được sao lưu thành công!', 'success')
       } else {
         showSnackbar('Sao lưu thất bại', 'error')
       }
     } catch (error) {
+      console.error('Backup error:', error)
       showSnackbar('Lỗi kết nối đến server', 'error')
     }
   }
@@ -167,19 +184,30 @@ const SettingsPage = () => {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
       })
 
-      if (response.ok) {
-        showSnackbar('Tài khoản đã được xóa!', 'success')
-        // Redirect to login page or home page
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        showSnackbar('Tài khoản đã được xóa thành công!', 'success')
+        
+        // Xóa dữ liệu localStorage
+        localStorage.removeItem('token')
+        localStorage.removeItem('userId')
+        localStorage.removeItem('userFullName')
+        localStorage.removeItem('userEmail')
+        
+        // Redirect về trang login sau 2 giây
         setTimeout(() => {
           window.location.href = '/login'
         }, 2000)
       } else {
-        showSnackbar('Xóa tài khoản thất bại', 'error')
+        showSnackbar(result.error || 'Xóa tài khoản thất bại', 'error')
       }
     } catch (error) {
+      console.error('Delete account error:', error)
       showSnackbar('Lỗi kết nối đến server', 'error')
     } finally {
       setDeleteDialogOpen(false)

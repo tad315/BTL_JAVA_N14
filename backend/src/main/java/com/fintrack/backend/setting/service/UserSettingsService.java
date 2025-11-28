@@ -119,4 +119,26 @@ public class UserSettingsService {
 
         return response;
     }
+
+    // Xóa tài khoản người dùng
+    @Transactional
+    public Map<String, Object> deleteUserAccount() {
+        String email = getCurrentUserEmail();
+        Optional<User> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isEmpty()) {
+            throw new RuntimeException("User not found");
+        }
+
+        User user = userOpt.get();
+        
+        // Xóa user (cascade sẽ xóa các dữ liệu liên quan nếu đã cấu hình)
+        userRepository.delete(user);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Tài khoản đã được xóa thành công");
+
+        return response;
+    }
 }
