@@ -72,7 +72,9 @@ const ExpenseAnalysisPage = () => {
       setLoading(true)
 
       // Sử dụng API analytics để lấy dữ liệu đã được xử lý
-      const chartDataResponse = await api.get('/api/analytics/chart-data')
+      const chartDataResponse = await api.get('/api/analytics/chart-data', {
+        params: { userId: currentUserId }
+      })
       const chartData = chartDataResponse.data
 
       console.log('📊 Dữ liệu từ analytics API:', chartData)

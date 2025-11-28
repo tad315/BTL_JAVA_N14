@@ -27,13 +27,17 @@ public class AnalyticsController {
     public ResponseEntity<?> getFinancialReport(
             @AuthenticationPrincipal User user,
             @RequestParam int month,
-            @RequestParam int year
+            @RequestParam int year,
+            @RequestParam(required = false) Long userId
     ) {
-        if (user == null) {
-            return ResponseEntity.status(401).body("Unauthorized");
-        }
         try {
-            FinancialReportDTO report = service.getFinancialReport(user.getId(), month, year);
+            Long targetUserId = (user != null) ? user.getId() : userId;
+            
+            if (targetUserId == null) {
+                return ResponseEntity.status(401).body("User ID is required");
+            }
+            
+            FinancialReportDTO report = service.getFinancialReport(targetUserId, month, year);
             return ResponseEntity.ok(report);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error generating report: " + e.getMessage());
@@ -41,12 +45,19 @@ public class AnalyticsController {
     }
 
     @GetMapping("/chart-data")
-    public ResponseEntity<?> getChartData(@AuthenticationPrincipal User user) {
-        if (user == null) {
-            return ResponseEntity.status(401).body("Unauthorized");
-        }
+    public ResponseEntity<?> getChartData(
+            @AuthenticationPrincipal User user,
+            @RequestParam(required = false) Long userId
+    ) {
         try {
-            ChartDataDTO chartData = service.getChartData(user.getId());
+            // Ưu tiên lấy từ @AuthenticationPrincipal, nếu không có thì lấy từ param
+            Long targetUserId = (user != null) ? user.getId() : userId;
+            
+            if (targetUserId == null) {
+                return ResponseEntity.status(401).body("User ID is required");
+            }
+            
+            ChartDataDTO chartData = service.getChartData(targetUserId);
             return ResponseEntity.ok(chartData);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error getting chart data: " + e.getMessage());
@@ -54,12 +65,18 @@ public class AnalyticsController {
     }
 
     @GetMapping("/trend")
-    public ResponseEntity<?> getTrendAnalysis(@AuthenticationPrincipal User user) {
-        if (user == null) {
-            return ResponseEntity.status(401).body("Unauthorized");
-        }
+    public ResponseEntity<?> getTrendAnalysis(
+            @AuthenticationPrincipal User user,
+            @RequestParam(required = false) Long userId
+    ) {
         try {
-            List<TrendDTO> trendData = service.getTrendAnalysis(user.getId());
+            Long targetUserId = (user != null) ? user.getId() : userId;
+            
+            if (targetUserId == null) {
+                return ResponseEntity.status(401).body("User ID is required");
+            }
+            
+            List<TrendDTO> trendData = service.getTrendAnalysis(targetUserId);
             return ResponseEntity.ok(trendData);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error getting trend analysis: " + e.getMessage());
