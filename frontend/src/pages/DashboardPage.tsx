@@ -6,6 +6,7 @@ import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, T
 import { Pie, Bar } from 'react-chartjs-2'
 import DashboardLayout from '../components/DashboardLayout'
 import EmptyState from '../components/EmptyState'
+import BudgetAlert from '../components/BudgetAlert'
 import api from '../api'
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Tooltip, Legend)
@@ -46,6 +47,14 @@ interface Wallet {
   balance: number
 }
 
+interface Budget {
+  id: number
+  category: string
+  limitAmount: number
+  spent: number
+  month: string
+}
+
 const DashboardPage = () => {
   const navigate = useNavigate()
   const currentUserId = Number(localStorage.getItem('userId')) || null
@@ -63,6 +72,7 @@ const DashboardPage = () => {
     }],
   })
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([])
+  const [budgets, setBudgets] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
 
   const formatCurrency = (amount: number) => {
@@ -108,6 +118,18 @@ const DashboardPage = () => {
       })
       const wallets: Wallet[] = walletsRes.data || []
       console.log('💼 Wallets:', wallets.length, 'wallets')
+
+      // Fetch budgets cho tháng hiện tại
+      try {
+        const budgetsRes = await api.get('/budgets', {
+          params: { month: currentMonth }
+        })
+        setBudgets(budgetsRes.data || [])
+        console.log('📊 Budgets:', budgetsRes.data?.length || 0, 'budgets')
+      } catch (budgetError) {
+        console.error('❌ Error fetching budgets:', budgetError)
+        setBudgets([])
+      }
 
       // Tính toán stats - Backend trả về field 'date' (LocalDate)
       const currentMonthTransactions = allTransactions.filter(t => {
@@ -405,6 +427,9 @@ const DashboardPage = () => {
   return (
     <DashboardLayout>
       <Box>
+        {/* Cảnh báo ngân sách */}
+        {budgets.length > 0 && <BudgetAlert budgets={budgets} compact />}
+
         {/* Stats Cards */}
         <Grid container spacing={1.5} sx={{ mb: 3 }}>
           {stats.map((stat, index) => (

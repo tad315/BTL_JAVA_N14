@@ -8,6 +8,7 @@ import {
 import { Search, Edit, Delete } from "@mui/icons-material";
 import DashboardLayout from "../components/DashboardLayout";
 import EmptyState from "../components/EmptyState";
+import BudgetAlert from "../components/BudgetAlert";
 import api from "../api";
 
 interface Budget {
@@ -175,6 +176,9 @@ const BudgetManagementPage = () => {
         <Typography variant="h5" sx={{ mb: 3, fontWeight: 600, color: "#2E5B47" }}>
           Quản lý ngân sách:
         </Typography>
+
+        {/* Cảnh báo ngân sách */}
+        {budgets.length > 0 && <BudgetAlert budgets={budgets} />}
 
         {/* Toolbar */}
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, flexWrap: "wrap", gap: 2 }}>

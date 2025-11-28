@@ -1,8 +1,10 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 // Khởi tạo Gemini AI
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyD4JXN1jV8VB0jepu2jvnVHQWoe7i3ksho'
-const genAI = new GoogleGenerativeAI(API_KEY)
+// ⚠️ QUAN TRỌNG: Không bao giờ hardcode API key trong code!
+// API key phải được lưu trong file .env và KHÔNG được commit lên Git
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
+const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null
 
 // Model configuration
 const model = genAI.getGenerativeModel({ 
@@ -95,7 +97,7 @@ export const sendMessageToGemini = async (
 ): Promise<string> => {
   try {
     // Kiểm tra API key
-    if (!API_KEY) {
+    if (!API_KEY || !genAI) {
       throw new Error('API key chưa được cấu hình. Vui lòng thêm VITE_GEMINI_API_KEY vào file .env')
     }
 
@@ -146,7 +148,7 @@ export const getQuickResponse = async (userMessage: string): Promise<string> => 
     console.log('🔵 API Key:', API_KEY ? `${API_KEY.substring(0, 10)}...` : 'Not found')
     console.log('🔵 User message:', userMessage)
     
-    if (!API_KEY) {
+    if (!API_KEY || !genAI) {
       console.log('⚠️ No API key, using mock response')
       return getMockResponse(userMessage)
     }
