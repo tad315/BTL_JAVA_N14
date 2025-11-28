@@ -264,6 +264,8 @@ const DashboardPage = () => {
         }
       })
       const transactions: Transaction[] = res.data.content || []
+      console.log('📊 Transactions for bar chart:', transactions.length, 'transactions')
+      console.log('📊 Sample transaction:', transactions[0])
 
       const monthlyData: { [key: number]: { income: number, expense: number } } = {}
       for (let i = 0; i < 12; i++) {
@@ -271,10 +273,15 @@ const DashboardPage = () => {
       }
 
       transactions.forEach(t => {
-        if (t.transactionDate) {
-          const date = new Date(t.transactionDate)
-          if (date.getFullYear() === currentYear) {
-            const month = date.getMonth()
+        const dateStr = t.transactionDate || t.date
+        if (dateStr) {
+          const date = new Date(dateStr)
+          const year = date.getFullYear()
+          const month = date.getMonth()
+          
+          console.log(`📅 Transaction: ${dateStr} -> Year: ${year}, Month: ${month}, Amount: ${t.amount}, Income: ${t.isIncome}`)
+          
+          if (year === currentYear) {
             if (t.isIncome) {
               monthlyData[month].income += (t.amount || 0) / 1000000
             } else {
