@@ -99,6 +99,8 @@ const DashboardPage = () => {
       })
       const allTransactions: Transaction[] = transactionsRes.data.content || []
       console.log('📦 All transactions:', allTransactions.length, 'transactions')
+      console.log('📝 First transaction sample:', allTransactions[0])
+      console.log('📅 Looking for month:', currentMonth)
 
       // Fetch wallets
       const walletsRes = await api.get('/wallets', {
@@ -107,10 +109,15 @@ const DashboardPage = () => {
       const wallets: Wallet[] = walletsRes.data || []
       console.log('💼 Wallets:', wallets.length, 'wallets')
 
-      // Tính toán stats
-      const currentMonthTransactions = allTransactions.filter(t => 
-        t.transactionDate?.startsWith(currentMonth)
-      )
+      // Tính toán stats - Kiểm tra cả transactionDate và date field
+      const currentMonthTransactions = allTransactions.filter(t => {
+        const txDate = t.transactionDate || t.date
+        const matches = txDate && txDate.startsWith(currentMonth)
+        if (txDate) {
+          console.log(`🔍 Checking: ${txDate} starts with ${currentMonth}? ${matches}`)
+        }
+        return matches
+      })
       console.log('📅 Current month transactions:', currentMonthTransactions.length, 'for', currentMonth)
       
       const totalIncome = currentMonthTransactions
