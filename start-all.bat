@@ -33,5 +33,8 @@ echo Backend and Frontend are starting...
 echo Backend: http://localhost:8080
 echo Frontend: http://localhost:3001
 echo ========================================
-pause
+echo.
+echo Check the Backend and Frontend windows for logs.
+echo Close this window if you don't need it.
+echo.
 
