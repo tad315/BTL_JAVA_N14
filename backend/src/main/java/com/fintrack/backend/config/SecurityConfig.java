@@ -31,19 +31,23 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 .authorizeHttpRequests(authorize -> authorize
-                        // 1. Cho phép Đăng nhập/Đăng ký (Code cũ của bạn)
+                        // 1. Cho phép Đăng nhập/Đăng ký
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // 2. THÊM DÒNG NÀY: Cho phép Giao dịch hoạt động mà không cần Token (Tạm thời)
+                        // 2. Cho phép Giao dịch hoạt động mà không cần Token (Tạm thời)
                         .requestMatchers("/api/transactions/**").permitAll()
 
-                        // 3. --- THÊM DÒNG NÀY ĐỂ SỬA LỖI 403 CHO BUDGET ---
+                        // 3. Cho phép Budget
                         .requestMatchers("/api/budgets/**").permitAll()
 
-                        // 4. THÊM DÒNG NÀY: Cho phép API Chat AI hoạt động mà không cần Token (Tạm thời)
+                        // 4. Cho phép API Chat AI
                         .requestMatchers("/api/chat/**").permitAll()
 
-                        // 5. Các API khác thì vẫn bắt buộc đăng nhập
+                        // 5. Cho phép API Analytics và Reports
+                        .requestMatchers("/api/analytics/**").permitAll()
+                        .requestMatchers("/api/reports/**").permitAll()
+
+                        // 6. Các API khác thì vẫn bắt buộc đăng nhập
                         .anyRequest().authenticated()
                 )
 

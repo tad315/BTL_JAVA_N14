@@ -84,8 +84,6 @@ const ExpenseAnalysisPage = () => {
         const transactions = await fetchDataFromTransactions()
         if (transactions && transactions.length > 0) {
           processAllData(transactions)
-        } else {
-          createSampleData()
         }
       }
     } catch (error) {
@@ -96,12 +94,9 @@ const ExpenseAnalysisPage = () => {
         const transactions = await fetchDataFromTransactions()
         if (transactions && transactions.length > 0) {
           processAllData(transactions)
-        } else {
-          createSampleData()
         }
       } catch (fallbackError) {
         console.error('💥 Lỗi fallback:', fallbackError)
-        createSampleData()
       }
     } finally {
       setLoading(false)
@@ -303,56 +298,6 @@ const ExpenseAnalysisPage = () => {
         {
           label: 'Thu nhập (triệu VND)',
           data: incomeData,
-          backgroundColor: '#A8C5B8',
-          borderColor: '#A8C5B8',
-          borderWidth: 1,
-        },
-      ],
-    })
-  }
-
-  const createSampleData = () => {
-    // Dữ liệu mẫu với tháng 9 có dữ liệu
-    const samplePieData = {
-      labels: ['Ăn uống', 'Giải trí', 'Mua sắm', 'Di chuyển'],
-      datasets: [{
-        data: [45, 25, 20, 10],
-        backgroundColor: [
-          '#A8C5B8',
-          '#6B8E7F',
-          '#4A7260',
-          '#5A8372',
-        ],
-        borderWidth: 0,
-      }],
-    }
-
-    setPieData(samplePieData)
-
-    // Dữ liệu mẫu cho 12 tháng với tháng 9 có dữ liệu
-    const sampleLabels = [
-      'Tháng 10/2024', 'Tháng 11/2024', 'Tháng 12/2024', 'Tháng 1/2025',
-      'Tháng 2/2025', 'Tháng 3/2025', 'Tháng 4/2025', 'Tháng 5/2025',
-      'Tháng 6/2025', 'Tháng 7/2025', 'Tháng 8/2025', 'Tháng 9/2025'
-    ]
-
-    // Tháng 9 có dữ liệu cụ thể
-    const sampleExpenseData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.647]
-    const sampleIncomeData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 45.0]
-
-    setBarData({
-      labels: sampleLabels,
-      datasets: [
-        {
-          label: 'Chi tiêu (triệu VND)',
-          data: sampleExpenseData,
-          backgroundColor: '#2E5B47',
-          borderColor: '#2E5B47',
-          borderWidth: 1,
-        },
-        {
-          label: 'Thu nhập (triệu VND)',
-          data: sampleIncomeData,
           backgroundColor: '#A8C5B8',
           borderColor: '#A8C5B8',
           borderWidth: 1,
