@@ -96,6 +96,12 @@ const SettingsPage = () => {
       const result = await response.json()
 
       if (response.ok && result.success) {
+        // Cập nhật localStorage để header hiển thị tên mới ngay lập tức
+        localStorage.setItem('userFullName', userInfo.fullName)
+        
+        // Dispatch custom event để DashboardLayout cập nhật
+        window.dispatchEvent(new Event('userProfileUpdated'))
+        
         showSnackbar('Thông tin cá nhân đã được cập nhật!', 'success')
       } else {
         showSnackbar(result.error || 'Cập nhật thất bại', 'error')

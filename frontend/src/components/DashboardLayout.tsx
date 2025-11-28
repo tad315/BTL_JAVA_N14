@@ -125,14 +125,24 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   // 2. CẬP NHẬT LOGIC: Dùng useEffect để đọc tên người dùng từ localStorage
   useEffect(() => {
-    // Đọc tên người dùng từ localStorage (được lưu sau khi đăng ký/đăng nhập)
-    const storedFullName = localStorage.getItem('userFullName');
-
-    if (storedFullName) {
-        // Cập nhật state nếu tìm thấy tên
+    // Hàm cập nhật tên người dùng từ localStorage
+    const updateUserName = () => {
+      const storedFullName = localStorage.getItem('userFullName');
+      if (storedFullName) {
         setUserName(storedFullName);
+      }
     }
-    // Nếu không tìm thấy, nó sẽ giữ giá trị mặc định là "User"
+
+    // Cập nhật lần đầu khi component mount
+    updateUserName();
+
+    // Lắng nghe event khi user profile được cập nhật
+    window.addEventListener('userProfileUpdated', updateUserName);
+
+    // Cleanup event listener khi component unmount
+    return () => {
+      window.removeEventListener('userProfileUpdated', updateUserName);
+    };
   }, []);
 
 
