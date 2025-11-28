@@ -1,36 +1,34 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
   Paper,
   TextField,
   Button,
-  Switch,
-  FormControlLabel,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Grid,
   Alert,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogContentText,
   DialogActions,
-  Chip,
+  DialogContentText,
+  Snackbar,
 } from '@mui/material'
-import { Add, Delete } from '@mui/icons-material'
 import DashboardLayout from '../components/DashboardLayout'
 
+interface Category {
+  id: number;
+  name: string;
+  type: string;
+  icon?: string;
+  color?: string;
+}
+
 const SettingsPage = () => {
-  // TODO: Module 7 - Configuration & Settings chưa có backend
-  // Giữ mock data tạm thời, sẽ thay thế bằng API sau
-  // User info (MOCK DATA - TẠM THỜI)
   const [userInfo, setUserInfo] = useState({
-    name: 'User',
-    email: 'user@example.com',
-    phone: '0123456789',
+    fullName: '',
+    email: '',
+    phone: '',
   })
 
   const [passwordData, setPasswordData] = useState({
@@ -39,63 +37,147 @@ const SettingsPage = () => {
     confirmPassword: '',
   })
 
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: true,
-    sms: false,
-  })
-
-  const [language, setLanguage] = useState('vi')
-  
-  // Categories (MOCK DATA - TẠM THỜI)
-  // TODO: Sẽ lấy từ API /api/categories sau
-  const [categories, setCategories] = useState([
-    'Ăn uống',
-    'Sinh hoạt',
-    'Đi lại',
-    'Giải trí',
-    'Giáo dục',
-    'Y tế',
-  ])
-  
-  const [newCategory, setNewCategory] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' })
 
-  const handleSaveProfile = () => {
-    alert('Thông tin cá nhân đã được cập nhật!')
+  // Load user profile từ API
+  useEffect(() => {
+    fetchUserProfile()
+  }, [])
+
+  const getAuthToken = () => {
+    return localStorage.getItem('token') || ''
   }
 
-  const handleChangePassword = () => {
+  const fetchUserProfile = async () => {
+    try {
+      const token = getAuthToken()
+      const response = await fetch('http://localhost:8080/api/user/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setUserInfo({
+          fullName: data.fullName || '',
+          email: data.email || '',
+          phone: data.phone || '',
+        })
+      } else {
+        showSnackbar('Lỗi khi tải thông tin người dùng', 'error')
+      }
+    } catch (error) {
+      showSnackbar('Lỗi kết nối đến server', 'error')
+    }
+  }
+
+  const showSnackbar = (message: string, severity: 'success' | 'error') => {
+    setSnackbar({ open: true, message, severity })
+  }
+
+  const handleSaveProfile = async () => {
+    try {
+      const token = getAuthToken()
+      const response = await fetch('http://localhost:8080/api/user/profile', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName: userInfo.fullName,
+          phone: userInfo.phone,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        showSnackbar('Thông tin cá nhân đã được cập nhật!', 'success')
+      } else {
+        showSnackbar(result.error || 'Cập nhật thất bại', 'error')
+      }
+    } catch (error) {
+      showSnackbar('Lỗi kết nối đến server', 'error')
+    }
+  }
+
+  const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert('Mật khẩu mới không khớp!')
+      showSnackbar('Mật khẩu mới không khớp!', 'error')
       return
     }
-    alert('Mật khẩu đã được thay đổi!')
-    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
-  }
 
-  const handleAddCategory = () => {
-    if (newCategory.trim()) {
-      setCategories([...categories, newCategory.trim()])
-      setNewCategory('')
+    try {
+      const token = getAuthToken()
+      const response = await fetch('http://localhost:8080/api/user/password', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(passwordData),
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        showSnackbar('Mật khẩu đã được thay đổi!', 'success')
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
+      } else {
+        showSnackbar(result.error || 'Đổi mật khẩu thất bại', 'error')
+      }
+    } catch (error) {
+      showSnackbar('Lỗi kết nối đến server', 'error')
     }
   }
 
-  const handleDeleteCategory = (index: number) => {
-    setCategories(categories.filter((_, i) => i !== index))
+  const handleBackup = async () => {
+    try {
+      const token = getAuthToken()
+      const response = await fetch('http://localhost:8080/api/backup', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        showSnackbar('Dữ liệu đang được sao lưu...', 'success')
+      } else {
+        showSnackbar('Sao lưu thất bại', 'error')
+      }
+    } catch (error) {
+      showSnackbar('Lỗi kết nối đến server', 'error')
+    }
   }
 
-  const handleBackup = () => {
-    alert('Dữ liệu đang được sao lưu...')
-  }
+  const handleDeleteAccount = async () => {
+    try {
+      const token = getAuthToken()
+      const response = await fetch('http://localhost:8080/api/user/account', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
 
-  const handleRestore = () => {
-    alert('Khôi phục dữ liệu...')
-  }
-
-  const handleDeleteAccount = () => {
-    setDeleteDialogOpen(false)
-    alert('Tài khoản đã được xóa!')
+      if (response.ok) {
+        showSnackbar('Tài khoản đã được xóa!', 'success')
+        // Redirect to login page or home page
+        setTimeout(() => {
+          window.location.href = '/login'
+        }, 2000)
+      } else {
+        showSnackbar('Xóa tài khoản thất bại', 'error')
+      }
+    } catch (error) {
+      showSnackbar('Lỗi kết nối đến server', 'error')
+    } finally {
+      setDeleteDialogOpen(false)
+    }
   }
 
   return (
@@ -115,8 +197,8 @@ const SettingsPage = () => {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <TextField
                   label="Họ và tên"
-                  value={userInfo.name}
-                  onChange={(e) => setUserInfo({ ...userInfo, name: e.target.value })}
+                  value={userInfo.fullName}
+                  onChange={(e) => setUserInfo({ ...userInfo, fullName: e.target.value })}
                   fullWidth
                 />
                 <TextField
@@ -125,6 +207,7 @@ const SettingsPage = () => {
                   value={userInfo.email}
                   onChange={(e) => setUserInfo({ ...userInfo, email: e.target.value })}
                   fullWidth
+                  disabled
                 />
                 <TextField
                   label="Số điện thoại"
@@ -160,6 +243,7 @@ const SettingsPage = () => {
                   value={passwordData.currentPassword}
                   onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                   fullWidth
+                  variant="outlined"
                 />
                 <TextField
                   label="Mật khẩu mới"
@@ -167,6 +251,7 @@ const SettingsPage = () => {
                   value={passwordData.newPassword}
                   onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                   fullWidth
+                  variant="outlined"
                 />
                 <TextField
                   label="Xác nhận mật khẩu mới"
@@ -174,6 +259,7 @@ const SettingsPage = () => {
                   value={passwordData.confirmPassword}
                   onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                   fullWidth
+                  variant="outlined"
                 />
                 <Button
                   variant="contained"
@@ -186,150 +272,6 @@ const SettingsPage = () => {
                 >
                   Đổi mật khẩu
                 </Button>
-              </Box>
-            </Paper>
-          </Grid>
-
-          {/* Cài đặt thông báo */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, borderRadius: 2, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)' }}>
-              <Typography variant="h6" sx={{ mb: 2, color: '#2E5B47', fontWeight: 600 }}>
-                Cài đặt thông báo
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={notifications.email}
-                      onChange={(e) => setNotifications({ ...notifications, email: e.target.checked })}
-                      sx={{
-                        '& .MuiSwitch-switchBase.Mui-checked': {
-                          color: '#6B8E7F',
-                        },
-                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                          backgroundColor: '#6B8E7F',
-                        },
-                      }}
-                    />
-                  }
-                  label="Thông báo qua Email"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={notifications.push}
-                      onChange={(e) => setNotifications({ ...notifications, push: e.target.checked })}
-                      sx={{
-                        '& .MuiSwitch-switchBase.Mui-checked': {
-                          color: '#6B8E7F',
-                        },
-                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                          backgroundColor: '#6B8E7F',
-                        },
-                      }}
-                    />
-                  }
-                  label="Thông báo đẩy (Push)"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={notifications.sms}
-                      onChange={(e) => setNotifications({ ...notifications, sms: e.target.checked })}
-                      sx={{
-                        '& .MuiSwitch-switchBase.Mui-checked': {
-                          color: '#6B8E7F',
-                        },
-                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                          backgroundColor: '#6B8E7F',
-                        },
-                      }}
-                    />
-                  }
-                  label="Thông báo qua SMS"
-                />
-              </Box>
-            </Paper>
-          </Grid>
-
-          {/* Cài đặt ngôn ngữ */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, borderRadius: 2, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)' }}>
-              <Typography variant="h6" sx={{ mb: 2, color: '#2E5B47', fontWeight: 600 }}>
-                Cài đặt ngôn ngữ
-              </Typography>
-              <FormControl fullWidth>
-                <InputLabel>Ngôn ngữ</InputLabel>
-                <Select
-                  value={language}
-                  label="Ngôn ngữ"
-                  onChange={(e) => setLanguage(e.target.value)}
-                  sx={{
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#6B8E7F',
-                    },
-                  }}
-                >
-                  <MenuItem value="vi">Tiếng Việt</MenuItem>
-                  <MenuItem value="en">English</MenuItem>
-                  <MenuItem value="ja">日本語</MenuItem>
-                  <MenuItem value="ko">한국어</MenuItem>
-                </Select>
-              </FormControl>
-            </Paper>
-          </Grid>
-
-          {/* Quản lý danh mục chi tiêu */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3, borderRadius: 2, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)' }}>
-              <Typography variant="h6" sx={{ mb: 2, color: '#2E5B47', fontWeight: 600 }}>
-                Quản lý danh mục chi tiêu
-              </Typography>
-              
-              <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-                <TextField
-                  label="Thêm danh mục mới"
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleAddCategory()
-                    }
-                  }}
-                  sx={{ flex: 1, minWidth: '200px' }}
-                />
-                <Button
-                  variant="contained"
-                  startIcon={<Add />}
-                  onClick={handleAddCategory}
-                  sx={{
-                    backgroundColor: '#6B8E7F',
-                    '&:hover': { backgroundColor: '#2E5B47' },
-                  }}
-                >
-                  Thêm
-                </Button>
-              </Box>
-
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {categories.map((category, index) => (
-                  <Chip
-                    key={index}
-                    label={category}
-                    onDelete={() => handleDeleteCategory(index)}
-                    deleteIcon={<Delete />}
-                    sx={{
-                      backgroundColor: '#6B8E7F',
-                      color: '#fff',
-                      '& .MuiChip-deleteIcon': {
-                        color: 'rgba(255, 255, 255, 0.7)',
-                        '&:hover': {
-                          color: '#fff',
-                        },
-                      },
-                    }}
-                  />
-                ))}
               </Box>
             </Paper>
           </Grid>
@@ -353,20 +295,6 @@ const SettingsPage = () => {
                   }}
                 >
                   Sao lưu dữ liệu
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={handleRestore}
-                  sx={{
-                    borderColor: '#6B8E7F',
-                    color: '#6B8E7F',
-                    '&:hover': {
-                      borderColor: '#2E5B47',
-                      backgroundColor: 'rgba(107, 142, 127, 0.04)',
-                    },
-                  }}
-                >
-                  Khôi phục từ bản sao lưu
                 </Button>
               </Box>
             </Paper>
@@ -408,25 +336,32 @@ const SettingsPage = () => {
             </DialogContentText>
           </DialogContent>
           <DialogActions>
-            <Button 
+            <Button
               onClick={() => setDeleteDialogOpen(false)}
               sx={{ color: '#6B8E7F' }}
             >
               Hủy
             </Button>
-            <Button 
-              onClick={handleDeleteAccount} 
-              color="error" 
+            <Button
+              onClick={handleDeleteAccount}
+              color="error"
               variant="contained"
             >
               Xóa tài khoản
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Snackbar thông báo */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          message={snackbar.message}
+        />
       </Box>
     </DashboardLayout>
   )
 }
 
 export default SettingsPage
-
