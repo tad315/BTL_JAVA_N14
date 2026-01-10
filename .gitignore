@@ -96,3 +96,7 @@ logs/
 # Build output
 dist/
 *.tsbuildinfo
+
+# Ansible 
+**/*.pem
+
