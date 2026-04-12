@@ -20,7 +20,7 @@ import {
   Minimize,
   Chat,
 } from '@mui/icons-material'
-import { getQuickResponse } from '../services/geminiService'
+import chatSocketService, { type ConnectionState } from '../services/chatSocketService'
 
 interface Message {
   id: number
@@ -43,6 +43,7 @@ const ChatWidget = () => {
   const [inputMessage, setInputMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [connectionState, setConnectionState] = useState<ConnectionState>('connecting')
   const messagesEndRef = useRef<null | HTMLDivElement>(null)
 
   // Auto scroll to bottom
@@ -60,6 +61,10 @@ const ChatWidget = () => {
       setUnreadCount(0)
     }
   }, [isOpen])
+
+  useEffect(() => {
+    return chatSocketService.subscribeStatus(setConnectionState)
+  }, [])
 
   const handleSendMessage = async () => {
     if (inputMessage.trim() === '') return
@@ -80,7 +85,7 @@ const ChatWidget = () => {
 
     try {
       // Gọi Gemini API
-      const aiResponseText = await getQuickResponse(userMessageText)
+      const aiResponseText = await chatSocketService.sendMessage(userMessageText)
       
       const aiResponse: Message = {
         id: messages.length + 2,
@@ -98,7 +103,9 @@ const ChatWidget = () => {
       console.error('Error getting AI response:', error)
       const errorResponse: Message = {
         id: messages.length + 2,
-        text: '⚠️ Xin lỗi, có lỗi xảy ra khi xử lý yêu cầu của bạn. Vui lòng thử lại sau.',
+        text: error instanceof Error
+          ? error.message
+          : '⚠️ Xin lỗi, có lỗi xảy ra khi xử lý yêu cầu của bạn. Vui lòng thử lại sau.',
         sender: 'bot',
         timestamp: new Date(),
       }
@@ -232,11 +239,20 @@ const ChatWidget = () => {
                   width: 8, 
                   height: 8, 
                   borderRadius: '50%', 
-                  bgcolor: '#4caf50',
+                  bgcolor:
+                    connectionState === 'connected'
+                      ? '#4caf50'
+                      : connectionState === 'connecting'
+                        ? '#ffb300'
+                        : '#f44336',
                   animation: 'pulse 2s infinite',
                 }} />
                 <Typography variant="caption">
-                  Online
+                  {connectionState === 'connected'
+                    ? 'Online'
+                    : connectionState === 'connecting'
+                      ? 'Đang kết nối'
+                      : 'Mất kết nối'}
                 </Typography>
               </Box>
             </Box>

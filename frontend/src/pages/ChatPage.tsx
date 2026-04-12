@@ -11,7 +11,7 @@ import {
 } from '@mui/material'
 import { Send, SmartToy, Person, AttachFile, Mic } from '@mui/icons-material'
 import DashboardLayout from '../components/DashboardLayout'
-import { getQuickResponse } from '../services/geminiService'
+import chatSocketService, { type ConnectionState } from '../services/chatSocketService'
 
 interface Message {
   id: number
@@ -31,6 +31,7 @@ const ChatPage = () => {
   ])
   const [inputMessage, setInputMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [connectionState, setConnectionState] = useState<ConnectionState>('connecting')
   const messagesEndRef = useRef<null | HTMLDivElement>(null)
 
   // Auto scroll to bottom when new message
@@ -41,6 +42,10 @@ const ChatPage = () => {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  useEffect(() => {
+    return chatSocketService.subscribeStatus(setConnectionState)
+  }, [])
 
   const handleSendMessage = async () => {
     if (inputMessage.trim() === '') return
@@ -61,7 +66,7 @@ const ChatPage = () => {
 
     try {
       // Gọi Gemini API
-      const aiResponseText = await getQuickResponse(userMessageText)
+      const aiResponseText = await chatSocketService.sendMessage(userMessageText)
       
       const aiResponse: Message = {
         id: messages.length + 2,
@@ -74,7 +79,9 @@ const ChatPage = () => {
       console.error('Error getting AI response:', error)
       const errorResponse: Message = {
         id: messages.length + 2,
-        text: '⚠️ Xin lỗi, có lỗi xảy ra khi xử lý yêu cầu của bạn. Vui lòng thử lại sau.',
+        text: error instanceof Error
+          ? error.message
+          : '⚠️ Xin lỗi, có lỗi xảy ra khi xử lý yêu cầu của bạn. Vui lòng thử lại sau.',
         sender: 'bot',
         timestamp: new Date(),
       }
@@ -129,10 +136,21 @@ const ChatPage = () => {
           </Box>
           <Box sx={{ ml: 'auto' }}>
             <Chip 
-              label="Online" 
+              label={
+                connectionState === 'connected'
+                  ? 'Online'
+                  : connectionState === 'connecting'
+                    ? 'Đang kết nối'
+                    : 'Mất kết nối'
+              } 
               size="small" 
               sx={{ 
-                bgcolor: '#4caf50', 
+                bgcolor:
+                  connectionState === 'connected'
+                    ? '#4caf50'
+                    : connectionState === 'connecting'
+                      ? '#ffb300'
+                      : '#f44336',
                 color: 'white',
                 fontWeight: 600 
               }} 

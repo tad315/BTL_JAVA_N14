@@ -43,6 +43,9 @@ public class SecurityConfig {
                         // 4. THÊM DÒNG NÀY: Cho phép API Chat AI hoạt động mà không cần Token (Tạm thời)
                         .requestMatchers("/api/chat/**").permitAll()
 
+                        // 4.1 Cho phép WebSocket handshake cho chatbot
+                        .requestMatchers("/ws/**").permitAll()
+
                         // 5. Các API khác thì vẫn bắt buộc đăng nhập
                         .anyRequest().authenticated()
                 )
